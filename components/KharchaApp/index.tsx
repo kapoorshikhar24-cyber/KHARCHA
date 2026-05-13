@@ -23,6 +23,7 @@ import {
   SectionLabel, TogRow,
   BarChart, ExpenseRow, CategoryBar, BudgetCard,
   CatIcon, ArrowLeftIcon, BellIcon, PlusIcon, OverviewCard,
+  AuthStyles, BiometricOverlay,
 } from "./SubComponents";
 
 // ─── App ──────────────────────────────────────────────────────────────────────
@@ -57,6 +58,8 @@ export default function KharchaApp() {
   // ── Auth state ──────────────────────────────────────────────────────────────
   const [pinInput, setPinInput] = useState<string>("");
   const [shake, setShake] = useState(false);
+  const [bioStatus, setBioStatus] = useState<null | "scanning" | "success" | "fail">(null);
+  const [loginSuccess, setLoginSuccess] = useState(false);
 
   // ── Load from storage ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -67,6 +70,79 @@ export default function KharchaApp() {
     setCategories(savedSet.customCategories || CATEGORIES);
     setHasLoaded(true);
   }, []);
+
+  // ── Navigation ───────────────────────────────────────────────────────────────
+  const go = useCallback((s: ScreenName) => {
+    setScreen(s);
+    setVoiceOpen(false);
+    setPinInput("");
+  }, []);
+
+  // ── Auth Handlers ───────────────────────────────────────────────────────────
+  const handleBiometric = useCallback(async () => {
+    if (!settings.biometric || bioStatus) return;
+
+    setBioStatus("scanning");
+    
+    // Simulate biometric check duration
+    await new Promise(r => setTimeout(r, 1500));
+
+    // For a real PWA, you'd use navigator.credentials here
+    // For now, we simulate success
+    const success = true; 
+
+    if (success) {
+      setBioStatus("success");
+      setTimeout(() => {
+        setBioStatus(null);
+        go("cat");
+      }, 800);
+    } else {
+      setBioStatus("fail");
+      setTimeout(() => setBioStatus(null), 2000);
+    }
+  }, [settings.biometric, bioStatus, go]);
+
+  const handlePinInput = useCallback((num: string) => {
+    if (loginSuccess) return;
+    
+    const next = pinInput + num;
+    if (next.length <= 4) {
+      setPinInput(next);
+      
+      // Haptic feedback simulation
+      if (settings.haptic && window.navigator.vibrate) {
+        window.navigator.vibrate(10);
+      }
+
+      if (next.length === 4) {
+        if (next === settings.pinCode) {
+          setLoginSuccess(true);
+          setTimeout(() => {
+            setLoginSuccess(false);
+            go("cat");
+          }, 400);
+        } else {
+          setShake(true);
+          if (settings.haptic && window.navigator.vibrate) {
+            window.navigator.vibrate([50, 50, 50]);
+          }
+          setTimeout(() => {
+            setShake(false);
+            setPinInput("");
+          }, 500);
+        }
+      }
+    }
+  }, [pinInput, go, settings.pinCode, settings.haptic, loginSuccess]);
+
+  // ── Auto-trigger biometric on lock screen ───────────────────────────────────
+  useEffect(() => {
+    if (screen === "lock" && settings.biometric && hasLoaded && !bioStatus) {
+      const timer = setTimeout(handleBiometric, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [screen, settings.biometric, hasLoaded, handleBiometric]);
 
   // ── Persist on change ────────────────────────────────────────────────────────
   useEffect(() => {
@@ -79,40 +155,6 @@ export default function KharchaApp() {
     const nextSettings = { ...settings, customCategories: categories };
     saveStorage(STORAGE_KEYS.SETTINGS, nextSettings);
   }, [settings, categories, hasLoaded]);
-
-  // ── Navigation ───────────────────────────────────────────────────────────────
-  const go = useCallback((s: ScreenName) => {
-    setScreen(s);
-    setVoiceOpen(false);
-    setPinInput("");
-  }, []);
-
-  const handleBiometric = useCallback(async () => {
-    // Check if biometric is enabled
-    if (!settings.biometric) return;
-
-    // Simulate biometric check
-    // In a real app, you'd use navigator.credentials.get
-    setScreen("dash");
-  }, [settings.biometric]);
-
-  const handlePinInput = useCallback((num: string) => {
-    const next = pinInput + num;
-    if (next.length <= 4) {
-      setPinInput(next);
-      if (next.length === 4) {
-        if (next === settings.pinCode) {
-          setTimeout(() => go("dash"), 200);
-        } else {
-          setShake(true);
-          setTimeout(() => {
-            setShake(false);
-            setPinInput("");
-          }, 500);
-        }
-      }
-    }
-  }, [pinInput, go]);
 
   const clearPin = () => setPinInput("");
 
@@ -199,29 +241,93 @@ export default function KharchaApp() {
   // ════════════════════════════════════════════════════════════════════════════
 
   function renderLock() {
+    const digits = pinInput.padEnd(4, "");
+
+    const handleForgot = () => {
+      if (window.confirm("Forgot PIN? This will reset all your app data for security. Proceed?")) {
+        localStorage.clear();
+        window.location.reload();
+      }
+    };
+
     return (
-      <div style={{ ...S.screen, ...(shake ? S.shakeAnim : {}) } as any}>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 11, letterSpacing: "0.18em", color: TOKEN.muted, marginBottom: 8, textTransform: "uppercase" }}>
-            Expense Tracker
+      <div style={{ ...S.screen, gap: 30, position: "relative", ...(shake ? { animation: "shake 0.4s ease-in-out" } : {}) } as any}>
+        <AuthStyles />
+        
+        {bioStatus && <BiometricOverlay status={bioStatus} onCancel={() => setBioStatus(null)} />}
+
+        {/* Title Section */}
+        <div style={{ textAlign: "center", marginBottom: 10 }}>
+          <div style={{ fontSize: 11, letterSpacing: "0.2em", color: TOKEN.muted, marginBottom: 8, textTransform: "uppercase", fontWeight: 600 }}>
+            Secure Vault
           </div>
-          <div style={{ fontSize: 32, fontWeight: 500, color: TOKEN.text, letterSpacing: -1, fontFamily: TOKEN.mono }}>
+          <div style={{ fontSize: 32, fontWeight: 600, color: TOKEN.text, letterSpacing: -1, fontFamily: TOKEN.mono }}>
             KHARCHA
           </div>
         </div>
 
-        <button onClick={handleBiometric} aria-label="Biometric" style={S.biometricBtn as any}>
-          <FingerprintIcon size={42} />
-        </button>
-
-        <div style={{ textAlign: "center" }}>
-          <div style={{ color: TOKEN.textSub, fontSize: 14 }}>Touch to unlock</div>
-          <div style={{ color: TOKEN.muted, fontSize: 12, marginTop: 4 }}>or enter your PIN</div>
+        {/* PIN dots */}
+        <div style={{ display: "flex", gap: 18, justifyContent: "center" }}>
+          {[0, 1, 2, 3].map((i) => {
+            const filled = i < pinInput.length;
+            const isLast = i === pinInput.length - 1;
+            return (
+              <div key={i} style={{
+                width: 16, height: 16, borderRadius: "50%",
+                background: filled ? (loginSuccess ? TOKEN.success : TOKEN.amber) : "transparent",
+                border: `2px solid ${filled ? (loginSuccess ? TOKEN.success : TOKEN.amber) : TOKEN.dim}`,
+                transition: "all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+                transform: isLast ? "scale(1.2)" : "scale(1)",
+                boxShadow: filled ? `0 0 10px ${loginSuccess ? TOKEN.success : TOKEN.amber}40` : "none",
+              }} />
+            );
+          })}
         </div>
 
-        <div style={S.lastSession as any}>
-          <div style={{ color: TOKEN.muted, fontSize: 11, textAlign: "center" }}>
-            Last session &bull; {expenses.length} expenses &bull; {fmt(sumExpenses(expenses))}
+        {/* Number keypad */}
+        <div style={{
+          display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
+          gap: 16, width: "100%", maxWidth: 260, margin: "0 auto",
+        }}>
+          {[1,2,3,4,5,6,7,8,9].map((n) => (
+            <button key={n} onClick={() => handlePinInput(n.toString())} style={{
+              ...S.keyBtn,
+              background: "#16161F",
+              border: `1px solid ${TOKEN.border}`,
+              fontSize: 24,
+            } as any}>
+              {n}
+            </button>
+          ))}
+          {/* Biometric */}
+          <button onClick={handleBiometric} aria-label="Biometric unlock" style={{
+            ...S.keyBtn,
+            background: "#171720",
+            border: `1.5px solid ${TOKEN.amber}`,
+            color: TOKEN.amber,
+          } as any}>
+            <FingerprintIcon size={28} />
+          </button>
+          {/* 0 */}
+          <button onClick={() => handlePinInput("0")} style={S.keyBtn as any}>
+            0
+          </button>
+          {/* Backspace */}
+          <button onClick={() => setPinInput(p => p.slice(0, -1))} aria-label="Delete last digit" style={{
+            ...S.keyBtn,
+            color: TOKEN.danger,
+            fontSize: 20,
+          } as any}>
+            ⌫
+          </button>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+          <button onClick={handleForgot} style={S.forgotBtn}>
+            Forgot PIN?
+          </button>
+          <div style={{ color: TOKEN.muted, fontSize: 11, textAlign: "center", opacity: 0.7 }}>
+            {expenses.length} records secured
           </div>
         </div>
       </div>

@@ -7,6 +7,33 @@ import { S, TOKEN } from "./Styles";
 import { DAY_LABELS } from "./Constants";
 import { fmt, dateLabel } from "./Utils";
 
+// ─── Global Auth Styles (Keyframes) ──────────────────────────────────────────
+export function AuthStyles() {
+  return (
+    <style dangerouslySetInnerHTML={{ __html: `
+      @keyframes shake {
+        0%, 100% { transform: translateX(0); }
+        20%, 60% { transform: translateX(-6px); }
+        40%, 80% { transform: translateX(6px); }
+      }
+      @keyframes scan {
+        0% { transform: translateY(-40px); opacity: 0; }
+        50% { opacity: 1; }
+        100% { transform: translateY(40px); opacity: 0; }
+      }
+      @keyframes pulse {
+        0% { transform: scale(1); opacity: 0.5; }
+        100% { transform: scale(1.5); opacity: 0; }
+      }
+      @keyframes pop {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+        100% { transform: scale(1); }
+      }
+    `}} />
+  );
+}
+
 // ─── StatusBar ────────────────────────────────────────────────────────────────
 export function StatusBar() {
   const [time, setTime] = useState("");
@@ -58,6 +85,34 @@ export function FingerprintIcon({ size = 24, color = TOKEN.amber }) {
       <path d="M3.5 13a12 12 0 0 1 17 0" />
       <path d="M12 21a10 10 0 0 1 -10 -10" />
     </svg>
+  );
+}
+
+// ─── BiometricOverlay ─────────────────────────────────────────────────────────
+export function BiometricOverlay({ status, onCancel }: { status: "scanning" | "success" | "fail"; onCancel: () => void }) {
+  return (
+    <div style={S.biometricOverlay}>
+      <div style={S.biometricRing}>
+        <div style={{ ...S.biometricPulse, animation: "pulse 2s infinite" }} />
+        <FingerprintIcon size={60} color={status === "fail" ? TOKEN.danger : TOKEN.amber} />
+        {status === "scanning" && <div style={{ ...S.scanBar, animation: "scan 2s infinite ease-in-out" }} />}
+      </div>
+      
+      <div style={{ textAlign: "center" }}>
+        <div style={{ color: TOKEN.text, fontSize: 18, fontWeight: 500 }}>
+          {status === "scanning" ? "Authenticating..." : status === "success" ? "Success!" : "Failed"}
+        </div>
+        <div style={{ color: TOKEN.muted, fontSize: 13, marginTop: 4 }}>
+          {status === "scanning" ? "Hold your finger on the sensor" : status === "success" ? "Unlocking Kharcha..." : "Try again or use PIN"}
+        </div>
+      </div>
+
+      {status !== "success" && (
+        <button onClick={onCancel} style={{ ...S.forgotBtn, marginTop: 40, textDecoration: "none", color: TOKEN.text }}>
+          Cancel
+        </button>
+      )}
+    </div>
   );
 }
 
