@@ -19,7 +19,7 @@ import {
 } from "./Utils";
 import { S, TOKEN } from "./Styles";
 import {
-  StatusBar, HomeBar, Toggle,
+  StatusBar, HomeBar, Toggle, FingerprintIcon,
   SectionLabel, TogRow,
   BarChart, ExpenseRow, CategoryBar, BudgetCard,
 } from "./SubComponents";
@@ -52,6 +52,10 @@ export default function KharchaApp() {
   const [voiceOpen, setVoiceOpen] = useState<boolean>(false);
   const [voiceStep, setVoiceStep] = useState<0 | 1>(0);
 
+  // ── Auth state ──────────────────────────────────────────────────────────────
+  const [pinInput, setPinInput] = useState<string>("");
+  const [shake, setShake] = useState(false);
+
   // ── Persist on change ────────────────────────────────────────────────────────
   useEffect(() => saveStorage(STORAGE_KEYS.EXPENSES, expenses), [expenses]);
   useEffect(() => saveStorage(STORAGE_KEYS.SETTINGS, settings), [settings]);
@@ -60,7 +64,37 @@ export default function KharchaApp() {
   const go = useCallback((s: ScreenName) => {
     setScreen(s);
     setVoiceOpen(false);
+    setPinInput("");
   }, []);
+
+  const handleBiometric = useCallback(async () => {
+    // Check if biometric is enabled
+    if (!settings.biometric) return;
+
+    // Simulate biometric check
+    // In a real app, you'd use navigator.credentials.get
+    setScreen("dash");
+  }, [settings.biometric]);
+
+  const handlePinInput = useCallback((num: string) => {
+    const next = pinInput + num;
+    if (next.length <= 4) {
+      setPinInput(next);
+      if (next.length === 4) {
+        if (next === "1234") { // Default PIN for now
+          setTimeout(() => go("dash"), 200);
+        } else {
+          setShake(true);
+          setTimeout(() => {
+            setShake(false);
+            setPinInput("");
+          }, 500);
+        }
+      }
+    }
+  }, [pinInput, go]);
+
+  const clearPin = () => setPinInput("");
 
   // ── Expense actions ──────────────────────────────────────────────────────────
   const addExpense = useCallback(() => {
@@ -135,38 +169,53 @@ export default function KharchaApp() {
 
   function renderLock() {
     return (
-      <div style={S.screen}>
+      <div style={{ ...S.screen, ...(shake ? S.shakeAnim : {}) } as any}>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 11, letterSpacing: "0.18em", color: TOKEN.muted, marginBottom: 8, textTransform: "uppercase" }}>
-            Expense Tracker
+            Secure Access
           </div>
           <div style={{ fontSize: 32, fontWeight: 600, color: TOKEN.text, letterSpacing: -1, fontFamily: TOKEN.mono }}>
             KHARCHA
           </div>
         </div>
 
-        <button onClick={() => go("cat")} aria-label="Unlock" style={S.biometricBtn}>
-          <span style={{ fontSize: 40 }}>👆</span>
-        </button>
-
-        <div style={{ textAlign: "center" }}>
-          <div style={{ color: "#888898", fontSize: 14 }}>Touch to unlock</div>
-          <div style={{ color: TOKEN.muted, fontSize: 12, marginTop: 4 }}>or use PIN</div>
-        </div>
-
-        <div style={{ display: "flex", gap: 10 }}>
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} style={S.pinDot}>
-              <span style={{ color: TOKEN.dim, fontSize: 18 }}>•</span>
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 32, width: "100%", margin: "20px 0" }}>
+            <button onClick={handleBiometric} aria-label="Biometric" style={S.biometricBtn}>
+                <FingerprintIcon size={44} />
+            </button>
+            
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                <div style={{ color: TOKEN.muted, fontSize: 12 }}>Enter PIN</div>
+                <div style={{ display: "flex", gap: 12 }}>
+                {[0, 1, 2, 3].map((i) => (
+                    <div key={i} style={{
+                        ...S.pinDot,
+                        borderColor: pinInput.length > i ? TOKEN.amber : TOKEN.border,
+                        background: pinInput.length > i ? `${TOKEN.amber}20` : TOKEN.borderSub,
+                    } as any}>
+                    {pinInput.length > i && <div style={{ width: 10, height: 10, borderRadius: "50%", background: TOKEN.amber }} />}
+                    </div>
+                ))}
+                </div>
             </div>
-          ))}
         </div>
 
-        <div style={S.lastSession}>
+        <div style={S.keypadGrid as any}>
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
+                <button key={n} onClick={() => handlePinInput(n.toString())} style={S.keyBtn as any}>{n}</button>
+            ))}
+            <button onClick={clearPin} style={{ ...S.keyBtn, color: TOKEN.danger } as any}>✕</button>
+            <button onClick={() => handlePinInput("0")} style={S.keyBtn as any}>0</button>
+            <button onClick={handleBiometric} style={{ ...S.keyBtn, display: "flex", alignItems: "center", justifyContent: "center" } as any}>
+                <FingerprintIcon size={24} />
+            </button>
+        </div>
+
+        <div style={S.lastSession as any}>
           <span style={{ color: TOKEN.muted, fontSize: 11 }}>
             {expenses.length > 0
-              ? `${expenses.length} expense${expenses.length > 1 ? "s" : ""} • ${fmt(sumExpenses(expenses))} total`
-              : "No expenses yet — tap to start"}
+              ? `Protecting ${expenses.length} records • ${fmt(sumExpenses(expenses))}`
+              : "No expenses yet — Secure & Offline"}
           </span>
         </div>
       </div>

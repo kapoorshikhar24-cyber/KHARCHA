@@ -47,6 +47,23 @@ export function HomeBar() {
   );
 }
 
+// ─── FingerprintIcon ──────────────────────────────────────────────────────────
+export function FingerprintIcon({ size = 40, color = TOKEN.amber }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 12c0-4.4 3.6-8 8-8s8 3.6 8 8" />
+      <path d="M5 15c0-2.8 2.2-5 5-5s5 2.2 5 5" />
+      <path d="M8 18c0-1.1.9-2 2-2s2 .9 2 2" />
+      <path d="M11 20c0-6.6 5.4-12 12-12" />
+      <path d="M14 22c0-9.9 8.1-18 18-18" />
+      <path d="M2 12v1" />
+      <path d="M5 15v1" />
+      <path d="M8 18v1" />
+      <path d="M11 20v1" />
+    </svg>
+  );
+}
+
 // ─── Toggle ───────────────────────────────────────────────────────────────────
 interface ToggleProps {
   on: boolean;
