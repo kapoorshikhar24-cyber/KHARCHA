@@ -1,4 +1,4 @@
-import { Category, Settings } from "./Types";
+import { Category, Settings, Wallet } from "./Types";
 
 export const CATEGORIES: Category[] = [
   { id: "food",     label: "Food",     icon: "food",     color: "#EF9F27", bg: "var(--token-surfaceElevated)" },
@@ -8,6 +8,20 @@ export const CATEGORIES: Category[] = [
   { id: "lodging",  label: "Lodging",  icon: "lodging",  color: "#1D9E75", bg: "var(--token-surfaceElevated)" },
   { id: "bills",    label: "Bills",    icon: "bills",    color: "#639922", bg: "var(--token-surfaceElevated)" },
 ];
+
+export const WALLETS: Wallet[] = [
+  { id: "cash", label: "Cash", icon: "💵", color: "#1D9E75" },
+  { id: "bank", label: "Bank", icon: "🏦", color: "#378ADD" },
+  { id: "upi",  label: "UPI",  icon: "📱", color: "#7F77DD" },
+];
+
+export const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  food: ["lunch", "dinner", "breakfast", "swiggy", "zomato", "pizza", "coffee", "restaurant", "burger"],
+  travel: ["uber", "ola", "auto", "taxi", "flight", "train", "metro", "bus"],
+  fuel: ["petrol", "diesel", "cng", "fuel", "gas"],
+  shopping: ["amazon", "flipkart", "myntra", "clothes", "mall", "shoes"],
+  bills: ["rent", "electricity", "water", "internet", "wifi", "netflix", "spotify", "mobile", "recharge"],
+};
 
 export const AMOUNT_PRESETS = [50, 100, 200, 500, 1000];
 
@@ -27,6 +41,9 @@ export const DEFAULT_SETTINGS: Settings = {
   haptic: true,
   offline: true,
   dailyBudget: 2000,
+  monthlyBudget: 50000,
   userName: "User",
   userEmail: "",
+  wallets: WALLETS,
+  defaultWalletId: "cash",
 };

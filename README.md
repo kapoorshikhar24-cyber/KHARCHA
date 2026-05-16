@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🪙 KHARCHA — Premium Expense Tracker
 
-## Getting Started
+Kharcha is a high-performance, privacy-focused Progressive Web App (PWA) designed for seamless and secure expense tracking. It combines a premium biometric-first interface with intelligent logging capabilities.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## 🚀 Key Functionality
+
+### 🔐 Secure Authentication
+- **Biometric Unlock**: Integrated WebAuthn support for Fingerprint and FaceID.
+- **PIN Protection**: 4-digit PIN fallback with a custom, secure entry interface.
+- **Secure Vault**: End-to-end local data persistence with zero cloud tracking.
+- **Session Summary**: Glancable activity summary (count & total) on the lock screen.
+
+### 🎙️ Multi-Mode Logging
+- **Voice Intelligence**: AI-powered voice logging that parses amount, category, and notes automatically.
+- **Smart Keypad**: Custom numerical entry with rapid adjustment buttons (+/- 10, +/- 50) and common presets.
+- **Note Integration**: Add context to every transaction for better tracking.
+
+### 📊 Smart Dashboard & Analytics
+- **Dynamic Filtering**: Switch views between **Today**, **Weekly**, and **Monthly** spending.
+- **Visual Breakdown**: Interactive category bar charts showing where your money goes.
+- **Budget Monitoring**: Real-time tracking of daily totals against your recent history.
+
+### 📜 Expense Management
+- **Searchable History**: Instant full-text search across all your records and categories.
+- **Swipe-to-Delete**: Intuitive mobile-first gestures to manage and clean up records.
+- **Category Filtering**: Drill down into specific spending areas like Food, Travel, or Bills.
+
+### ⚙️ Personalization
+- **Theme Engine**: Dynamic Light/Dark mode support via a system-wide CSS token system.
+- **Custom Categories**: Manage and personalize the categories that matter to you.
+- **Haptic Feedback**: High-quality tactile responses for every interaction (Success, Error, Light, Medium).
+
+---
+
+## 🛠️ Technology Stack
+
+- **Framework**: [Next.js 15](https://nextjs.org/) (App Router)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Styling**: Vanilla CSS with a custom **CSS Variable Token System** for premium aesthetics.
+- **State Management**: React Hooks (useState, useCallback, useEffect) with LocalStorage persistence.
+- **Biometrics**: Browser WebAuthn API.
+
+---
+
+## 📁 Project Structure
+
+```text
+/components/KharchaApp/
+├── index.tsx          # Main entry & Screen Router
+├── SubComponents.tsx  # Atomic UI Widgets & Icons
+├── Styles.ts          # Central Design System & CSS Tokens
+├── Types.ts           # Shared Data Models
+├── Utils.ts           # Math, Formatting, & Auth Logic
+└── Constants.ts       # App Defaults & Configurations
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🛠️ Getting Started
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Installation
+```bash
+npm install
+```
 
-## Learn More
+### Development
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+### Build
+```bash
+npm run build
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🛡️ Privacy
+Kharcha is designed with privacy as a core principle. All data is stored locally on your device's `localStorage` and never leaves your browser.
