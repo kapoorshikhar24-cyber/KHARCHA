@@ -30,7 +30,15 @@ export const DAY_LABELS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
 export const STORAGE_KEYS = {
   EXPENSES: "kharcha_expenses",
   SETTINGS: "kharcha_settings",
+  // Multi-user keys (global, not per-user)
+  USERS: "kharcha_users",
+  ACTIVE_USER: "kharcha_active_user",
 };
+
+export const getUserStorageKeys = (userId: string) => ({
+  EXPENSES: `kharcha_user_${userId}_expenses`,
+  SETTINGS: `kharcha_user_${userId}_settings`,
+});
 
 export const DEFAULT_SETTINGS: Settings = {
   theme: "dark",

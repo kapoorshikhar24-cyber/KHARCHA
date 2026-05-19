@@ -9,8 +9,8 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import type { ScreenName, PeriodName, Category, Expense, Settings, Wallet } from "./Types";
-import { CATEGORIES, AMOUNT_PRESETS, DEFAULT_SETTINGS, STORAGE_KEYS, WALLETS, CATEGORY_KEYWORDS } from "./Constants";
+import type { ScreenName, PeriodName, Category, Expense, Settings, Wallet, UserProfile } from "./Types";
+import { CATEGORIES, AMOUNT_PRESETS, DEFAULT_SETTINGS, STORAGE_KEYS, WALLETS, CATEGORY_KEYWORDS, getUserStorageKeys } from "./Constants";
 import {
   fmt, todayKey, greeting, dateLabel,
   loadStorage, saveStorage,
@@ -73,8 +73,12 @@ import ReportsScreen from "./ReportsScreen";
 // ─── App ──────────────────────────────────────────────────────────────────────
 export default function KharchaApp() {
 
+  // ── Multi-user state ─────────────────────────────────────────────────────────
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [activeUserId, setActiveUserId] = useState<string>("");
+
   // ── Core state ──────────────────────────────────────────────────────────────
-  const [screen, setScreen] = useState<ScreenName>("lock");
+  const [screen, setScreen] = useState<ScreenName>("user_select");
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [hasLoaded, setHasLoaded] = useState(false);
@@ -90,6 +94,11 @@ export default function KharchaApp() {
   const [selWalletId, setSelWalletId] = useState<string>("cash");
   const [isRecurring, setIsRecurring] = useState<boolean>(false);
   const [txDate, setTxDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [cropImg, setCropImg] = useState<string | null>(null);
+  const [zoom, setZoom] = useState<number>(1);
+  const [offsetX, setOffsetX] = useState<number>(0);
+  const [offsetY, setOffsetY] = useState<number>(0);
+  const [rotation, setRotation] = useState<number>(0);
 
   // ── Categories ──────────────────────────────────────────────────────────────
   const [categories, setCategories] = useState<Category[]>(CATEGORIES);
@@ -115,14 +124,62 @@ export default function KharchaApp() {
   const [bioStatus, setBioStatus] = useState<null | "scanning" | "success" | "fail">(null);
   const [loginSuccess, setLoginSuccess] = useState(false);
 
-  // ── Load from storage ────────────────────────────────────────────────────────
+  // ── Load from storage (multi-user aware) ─────────────────────────────────────
   useEffect(() => {
-    const savedExp = loadStorage<Expense[]>(STORAGE_KEYS.EXPENSES, []);
-    const savedSet = loadStorage<Settings>(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS);
-    setExpenses(savedExp);
-    setSettings(savedSet);
-    setCategories(savedSet.customCategories || CATEGORIES);
-    setWallets(savedSet.wallets || WALLETS);
+    // Load user directory
+    const savedUsers = loadStorage<UserProfile[]>(STORAGE_KEYS.USERS, []);
+    const savedActiveId = loadStorage<string>(STORAGE_KEYS.ACTIVE_USER, "");
+
+    if (savedUsers.length === 0) {
+      // First-ever launch OR single-user migration:
+      // Migrate existing data into a new "User 1" profile
+      const legacyExp = loadStorage<Expense[]>(STORAGE_KEYS.EXPENSES, []);
+      const legacySett = loadStorage<Settings>(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS);
+      const newId = generateId();
+      const newUser: UserProfile = {
+        id: newId,
+        name: legacySett.userName || "User 1",
+        avatar: legacySett.profileImage,
+        createdAt: new Date().toISOString(),
+      };
+      const userKeys = getUserStorageKeys(newId);
+      saveStorage(userKeys.EXPENSES, legacyExp);
+      saveStorage(userKeys.SETTINGS, legacySett);
+      saveStorage(STORAGE_KEYS.USERS, [newUser]);
+      saveStorage(STORAGE_KEYS.ACTIVE_USER, newId);
+      setUsers([newUser]);
+      setActiveUserId(newId);
+      setExpenses(legacyExp);
+      setSettings(legacySett);
+      setCategories(legacySett.customCategories || CATEGORIES);
+      setWallets(legacySett.wallets || WALLETS);
+
+      // Route directly based on security settings
+      if (legacySett.pin || legacySett.biometric) {
+        setScreen("lock");
+      } else {
+        setScreen("dash");
+      }
+    } else {
+      // Normal multi-user load
+      setUsers(savedUsers);
+      const userId = savedActiveId || savedUsers[0].id;
+      setActiveUserId(userId);
+      const userKeys = getUserStorageKeys(userId);
+      const savedExp = loadStorage<Expense[]>(userKeys.EXPENSES, []);
+      const savedSet = loadStorage<Settings>(userKeys.SETTINGS, DEFAULT_SETTINGS);
+      setExpenses(savedExp);
+      setSettings(savedSet);
+      setCategories(savedSet.customCategories || CATEGORIES);
+      setWallets(savedSet.wallets || WALLETS);
+
+      // Route directly based on security settings
+      if (savedSet.pin || savedSet.biometric) {
+        setScreen("lock");
+      } else {
+        setScreen("dash");
+      }
+    }
     setHasLoaded(true);
   }, []);
 
@@ -139,11 +196,126 @@ export default function KharchaApp() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        updateSetting("profileImage", reader.result as string);
+        setCropImg(reader.result as string);
+        setZoom(1);
+        setOffsetX(0);
+        setOffsetY(0);
+        setRotation(0);
         if (settings.haptic) triggerHaptic("success");
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const renderCropModal = () => {
+    if (!cropImg) return null;
+
+    const handleSave = () => {
+      const img = new Image();
+      img.src = cropImg;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 150;
+        canvas.height = 150;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.fillStyle = "#000000";
+          ctx.fillRect(0, 0, 150, 150);
+
+          // Translate to center for rotation
+          ctx.translate(75, 75);
+          ctx.rotate((rotation * Math.PI) / 180);
+          ctx.scale(zoom, zoom);
+          ctx.translate(offsetX, offsetY);
+
+          // Calculate aspect ratio and draw centered & cropped
+          const size = Math.min(img.width, img.height);
+          const sx = (img.width - size) / 2;
+          const sy = (img.height - size) / 2;
+
+          ctx.drawImage(img, sx, sy, size, size, -75, -75, 150, 150);
+          
+          const compressed = canvas.toDataURL("image/jpeg", 0.85);
+          updateSetting("profileImage", compressed);
+          setCropImg(null);
+          setZoom(1);
+          setOffsetX(0);
+          setOffsetY(0);
+          setRotation(0);
+          if (settings.haptic) triggerHaptic("success");
+        }
+      };
+    };
+
+    return (
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+        background: "rgba(0,0,0,0.85)", display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20
+      }}>
+        <div style={{
+          background: TOKEN.surface, borderRadius: 24, padding: 24, width: "100%", maxWidth: 340,
+          display: "flex", flexDirection: "column", gap: 20, border: `1px solid ${TOKEN.border}`
+        }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: TOKEN.text, textAlign: "center" }}>Adjust Profile Picture</div>
+          
+          {/* Preview circle container */}
+          <div style={{
+            width: 150, height: 150, borderRadius: "50%", overflow: "hidden",
+            position: "relative", alignSelf: "center", border: `2px solid ${TOKEN.amber}`,
+            background: "#000"
+          }}>
+            <img src={cropImg} style={{
+              position: "absolute",
+              width: "100%", height: "100%", objectFit: "cover",
+              transform: `scale(${zoom}) translate(${offsetX}px, ${offsetY}px) rotate(${rotation}deg)`,
+              transition: "transform 0.1s ease"
+            }} alt="Preview" />
+          </div>
+
+          {/* Controls */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: TOKEN.muted, marginBottom: 4 }}>
+                <span>Zoom</span>
+                <span>{zoom.toFixed(1)}x</span>
+              </div>
+              <input type="range" min="1" max="3" step="0.1" value={zoom} onChange={(e) => setZoom(parseFloat(e.target.value))} style={{ width: "100%", accentColor: TOKEN.amber }} />
+            </div>
+
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: TOKEN.muted, marginBottom: 4 }}>
+                <span>Rotation</span>
+                <span>{rotation}°</span>
+              </div>
+              <input type="range" min="0" max="360" step="15" value={rotation} onChange={(e) => setRotation(parseInt(e.target.value))} style={{ width: "100%", accentColor: TOKEN.amber }} />
+            </div>
+
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: TOKEN.muted, marginBottom: 4 }}>
+                <span>Horizontal Offset</span>
+                <span>{offsetX}px</span>
+              </div>
+              <input type="range" min="-50" max="50" step="1" value={offsetX} onChange={(e) => setOffsetX(parseInt(e.target.value))} style={{ width: "100%", accentColor: TOKEN.amber }} />
+            </div>
+
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: TOKEN.muted, marginBottom: 4 }}>
+                <span>Vertical Offset</span>
+                <span>{offsetY}px</span>
+              </div>
+              <input type="range" min="-50" max="50" step="1" value={offsetY} onChange={(e) => setOffsetY(parseInt(e.target.value))} style={{ width: "100%", accentColor: TOKEN.amber }} />
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+            <button onClick={() => setCropImg(null)} style={{ flex: 1, padding: "12px", background: "transparent", border: `1px solid ${TOKEN.border}`, borderRadius: 12, color: TOKEN.textSub, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Cancel</button>
+            <button onClick={handleSave} style={{ flex: 1, padding: "12px", background: TOKEN.amber, border: "none", borderRadius: 12, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Save Picture</button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // ── Auth Handlers ───────────────────────────────────────────────────────────
@@ -252,19 +424,86 @@ export default function KharchaApp() {
     }
   }, [screen, settings.biometric, hasLoaded, handleBiometric]);
 
-  // ── Persist on change ────────────────────────────────────────────────────────
+  // ── Persist on change (namespaced per user) ─────────────────────────────────────
   useEffect(() => {
-    if (!hasLoaded) return;
-    saveStorage(STORAGE_KEYS.EXPENSES, expenses);
-  }, [expenses, hasLoaded]);
+    if (!hasLoaded || !activeUserId) return;
+    const userKeys = getUserStorageKeys(activeUserId);
+    saveStorage(userKeys.EXPENSES, expenses);
+  }, [expenses, hasLoaded, activeUserId]);
 
   useEffect(() => {
-    if (!hasLoaded) return;
+    if (!hasLoaded || !activeUserId) return;
+    const userKeys = getUserStorageKeys(activeUserId);
     const nextSettings = { ...settings, customCategories: categories };
-    saveStorage(STORAGE_KEYS.SETTINGS, nextSettings);
-  }, [settings, categories, hasLoaded]);
+    saveStorage(userKeys.SETTINGS, nextSettings);
+  }, [settings, categories, hasLoaded, activeUserId]);
 
   const clearPin = () => setPinInput("");
+
+  // ── Multi-user actions ────────────────────────────────────────────────────────
+  const switchUser = (userId: string) => {
+    // Save current user data first
+    if (activeUserId) {
+      const currKeys = getUserStorageKeys(activeUserId);
+      saveStorage(currKeys.EXPENSES, expenses);
+      saveStorage(currKeys.SETTINGS, { ...settings, customCategories: categories });
+    }
+    // Load new user data
+    const userKeys = getUserStorageKeys(userId);
+    const newExp = loadStorage<Expense[]>(userKeys.EXPENSES, []);
+    const newSet = loadStorage<Settings>(userKeys.SETTINGS, DEFAULT_SETTINGS);
+    setActiveUserId(userId);
+    saveStorage(STORAGE_KEYS.ACTIVE_USER, userId);
+    setExpenses(newExp);
+    setSettings(newSet);
+    setCategories(newSet.customCategories || CATEGORIES);
+    setWallets(newSet.wallets || WALLETS);
+    setPinInput("");
+    setLoginSuccess(false);
+    setBioStatus(null);
+    
+    // If target user has security enabled, go to lock, otherwise go straight to dashboard
+    if (newSet.pin || newSet.biometric) {
+      setScreen("lock");
+    } else {
+      setScreen("dash");
+    }
+    if (settings.haptic) triggerHaptic("medium");
+  };
+
+  const createUser = (name: string) => {
+    const newId = generateId();
+    const newUser: UserProfile = { id: newId, name, createdAt: new Date().toISOString() };
+    const newUserSettings: Settings = { ...DEFAULT_SETTINGS, userName: name, layoutMode: settings.layoutMode };
+    const userKeys = getUserStorageKeys(newId);
+    saveStorage(userKeys.EXPENSES, []);
+    saveStorage(userKeys.SETTINGS, newUserSettings);
+    const updated = [...users, newUser];
+    setUsers(updated);
+    saveStorage(STORAGE_KEYS.USERS, updated);
+    if (settings.haptic) triggerHaptic("success");
+    return newId;
+  };
+
+  const deleteUser = (userId: string) => {
+    if (users.length <= 1) { alert("You must keep at least one user."); return; }
+    const updated = users.filter(u => u.id !== userId);
+    setUsers(updated);
+    saveStorage(STORAGE_KEYS.USERS, updated);
+    // If deleting active user, switch to first remaining user
+    if (userId === activeUserId) switchUser(updated[0].id);
+    if (settings.haptic) triggerHaptic("medium");
+  };
+
+  const renameUser = (userId: string, newName: string) => {
+    const updated = users.map(u => u.id === userId ? { ...u, name: newName } : u);
+    setUsers(updated);
+    saveStorage(STORAGE_KEYS.USERS, updated);
+    // Also update settings.userName if it's the active user
+    if (userId === activeUserId) {
+      setSettings(s => ({ ...s, userName: newName }));
+    }
+  };
 
   // ── Expense actions ──────────────────────────────────────────────────────────
   const updateAmt = useCallback((delta: number) => {
@@ -304,6 +543,70 @@ export default function KharchaApp() {
   const deleteExpense = useCallback((id: string) => {
     setExpenses((prev) => prev.filter((e) => e.id !== id));
   }, []);
+
+  // ── Global keyboard support ──────────────────────────────────────────────────
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInputActive = activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA");
+
+      if (isInputActive) {
+        if (e.key === "Enter" && screen === "amt" && activeEl.id !== "p-upload") {
+          e.preventDefault();
+          if (settings.haptic) triggerHaptic("success");
+          setAmtInput("");
+          setShowKeypad(false);
+          addExpense();
+        }
+        return;
+      }
+
+      if (screen === "lock" && settings.pin) {
+        if (/^[0-9]$/.test(e.key)) {
+          e.preventDefault();
+          handlePinInput(e.key);
+        } else if (e.key === "Backspace") {
+          e.preventDefault();
+          if (settings.haptic) triggerHaptic("light");
+          setPinInput(p => p.slice(0, -1));
+        }
+      }
+
+      if (screen === "amt") {
+        if (/^[0-9]$/.test(e.key)) {
+          e.preventDefault();
+          if (settings.haptic) triggerHaptic("light");
+          setAmtInput(prev => {
+            const next = prev + e.key;
+            if (next.length > 7) return prev;
+            setAmtVal(parseInt(next) || 0);
+            return next;
+          });
+        } else if (e.key === "Backspace") {
+          e.preventDefault();
+          if (settings.haptic) triggerHaptic("light");
+          setAmtInput(prev => {
+            const next = prev.slice(0, -1);
+            setAmtVal(parseInt(next) || 0);
+            return next;
+          });
+        } else if (e.key === "Enter") {
+          e.preventDefault();
+          if (settings.haptic) triggerHaptic("success");
+          setAmtInput("");
+          setShowKeypad(false);
+          addExpense();
+        } else if (e.key === "Escape" || e.key === "o" || e.key === "O") {
+          e.preventDefault();
+          if (settings.haptic) triggerHaptic("medium");
+          setShowKeypad(false);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [screen, settings.pin, settings.haptic, handlePinInput, addExpense]);
 
   const registerBiometrics = useCallback(async () => {
     try {
@@ -485,6 +788,178 @@ export default function KharchaApp() {
   //  SCREENS
   // ════════════════════════════════════════════════════════════════════════════
 
+  function renderUserSelect() {
+    return (
+      <div style={{
+        minHeight: "100%", width: "100%",
+        background: "linear-gradient(160deg, #0b0b10 0%, #10101a 60%, #0d0d16 100%)",
+        display: "flex", flexDirection: "column", alignItems: "center",
+        justifyContent: "center", padding: "40px 24px", boxSizing: "border-box", gap: 0
+      }}>
+        {/* Header */}
+        <div style={{ textAlign: "center", marginBottom: 48 }}>
+          <div style={{
+            fontSize: 11, color: TOKEN.amber, letterSpacing: "0.25em",
+            textTransform: "uppercase", fontWeight: 700, marginBottom: 10
+          }}>KHARCHA</div>
+          <div style={{ fontSize: 28, fontWeight: 800, color: "#ffffff", lineHeight: 1.2 }}>
+            Who's logging in?
+          </div>
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginTop: 8 }}>
+            Select your profile to continue
+          </div>
+        </div>
+
+        {/* User grid */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${Math.min(users.length + 1, 3)}, minmax(100px, 140px))`,
+          gap: 20, justifyContent: "center", width: "100%", maxWidth: 480
+        }}>
+          {users.map((user) => {
+            const colors = ["#EF9F27", "#378ADD", "#1D9E75", "#7F77DD", "#D85A30"];
+            const colorIdx = user.name.charCodeAt(0) % colors.length;
+            const accentColor = colors[colorIdx];
+            return (
+              <button
+                key={user.id}
+                onClick={() => switchUser(user.id)}
+                style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 14,
+                  padding: "24px 16px", borderRadius: 24,
+                  border: `1px solid rgba(255,255,255,0.08)`,
+                  background: "rgba(255,255,255,0.04)",
+                  cursor: "pointer", transition: "all 0.2s",
+                  backdropFilter: "blur(12px)"
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.09)";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = accentColor;
+                  (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-4px)";
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.08)";
+                  (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+                }}
+              >
+                {/* Avatar */}
+                <div style={{
+                  width: 76, height: 76, borderRadius: "50%", overflow: "hidden",
+                  background: `linear-gradient(135deg, ${accentColor}33, ${accentColor}11)`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  border: `2.5px solid ${accentColor}55`,
+                  fontSize: 30, fontWeight: 700, color: accentColor,
+                  boxShadow: `0 0 24px ${accentColor}22`
+                }}>
+                  {user.avatar
+                    ? <img src={user.avatar} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt={user.name} />
+                    : user.name.charAt(0).toUpperCase()
+                  }
+                </div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#ffffff", textAlign: "center" }}>{user.name}</div>
+                <div style={{
+                  fontSize: 10, color: accentColor, fontWeight: 600, letterSpacing: "0.1em",
+                  textTransform: "uppercase", background: `${accentColor}22`,
+                  padding: "3px 10px", borderRadius: 20
+                }}>Login →</div>
+              </button>
+            );
+          })}
+
+          {/* Add User card */}
+          <button
+            onClick={() => {
+              const name = window.prompt("Enter new user name:");
+              if (name?.trim()) { createUser(name.trim()); }
+            }}
+            style={{
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 14,
+              padding: "24px 16px", borderRadius: 24,
+              border: "1.5px dashed rgba(255,255,255,0.12)",
+              background: "transparent", cursor: "pointer", transition: "all 0.2s"
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(239,159,39,0.4)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.12)"; }}
+          >
+            <div style={{
+              width: 76, height: 76, borderRadius: "50%",
+              background: "rgba(255,255,255,0.04)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 30, color: "rgba(255,255,255,0.25)",
+              border: "1.5px dashed rgba(255,255,255,0.12)"
+            }}>+</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.3)" }}>New User</div>
+            <div style={{ fontSize: 10, color: "transparent" }}>–</div>
+          </button>
+        </div>
+
+        {/* Footer */}
+        <div style={{ marginTop: 48, fontSize: 12, color: "rgba(255,255,255,0.2)", textAlign: "center" }}>
+          Tap your profile to enter your PIN
+        </div>
+      </div>
+    );
+  }
+
+  function renderUserManage() {
+    return (
+      <div style={S.screenPad}>
+        <div style={S.row}>
+          <button onClick={() => go("set")} style={S.iconBtn} aria-label="Back"><ArrowLeftIcon color={TOKEN.dim} /></button>
+          <div style={S.heading}>Manage Users</div>
+          <div style={{ width: 34 }} />
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 24 }}>
+          {users.map((user) => (
+            <div key={user.id} style={{ ...S.card, display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: "50%", overflow: "hidden", flexShrink: 0,
+                background: TOKEN.surfaceElevated, display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 22, border: `2px solid ${user.id === activeUserId ? TOKEN.amber : "transparent"}`
+              }}>
+                {user.avatar
+                  ? <img src={user.avatar} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt={user.name} />
+                  : user.name.charAt(0).toUpperCase()
+                }
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 600, color: TOKEN.text, fontSize: 15 }}>{user.name}</div>
+                {user.id === activeUserId && <div style={{ fontSize: 11, color: TOKEN.amber }}>Currently active</div>}
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={() => {
+                    const newName = window.prompt("Rename user:", user.name);
+                    if (newName?.trim()) renameUser(user.id, newName.trim());
+                  }}
+                  style={{ background: "none", border: `1px solid ${TOKEN.border}`, borderRadius: 8, padding: "5px 10px", color: TOKEN.textSub, cursor: "pointer", fontSize: 11 }}
+                >Rename</button>
+                {user.id !== activeUserId && (
+                  <button
+                    onClick={() => { if (window.confirm(`Delete ${user.name}? All their data will be lost.`)) deleteUser(user.id); }}
+                    style={{ background: "none", border: "none", color: TOKEN.danger, cursor: "pointer", fontSize: 11 }}
+                  >Delete</button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button
+          onClick={() => { const name = window.prompt("New user name:"); if (name?.trim()) createUser(name.trim()); }}
+          style={{ ...S.primaryBtn, marginTop: 20, width: "100%" }}
+        >+ Add New User</button>
+
+        <button
+          onClick={() => go("user_select")}
+          style={{ ...S.primaryBtn, marginTop: 12, width: "100%", background: TOKEN.surfaceHighlight, color: TOKEN.textSub }}
+        >Switch User</button>
+      </div>
+    );
+  }
+
   function renderLock() {
     const handleForgot = () => {
       if (window.confirm("Forgot PIN? This will reset all your app data for security. Proceed?")) {
@@ -495,6 +970,7 @@ export default function KharchaApp() {
 
     const lastCount = expenses.length;
     const lastTotal = sumExpenses(expenses);
+    const activeUser = users.find(u => u.id === activeUserId);
 
     return (
       <div style={{
@@ -514,25 +990,63 @@ export default function KharchaApp() {
           <div style={S.lockTitle}>KHARCHA</div>
         </div>
 
-        {/* Biometric Icon */}
-        <div style={{ display: "flex", justifyContent: "center", margin: "40px 0" }}>
-          <button 
-            onClick={() => { if (settings.haptic) triggerHaptic("medium"); handleBiometric(); }} 
-            style={S.biometricCircle as any}
-            aria-label="Unlock with biometrics"
-          >
-            <FingerprintIcon size={64} color={TOKEN.amber} />
-          </button>
-        </div>
+        {/* Active User profile details */}
+        {activeUser && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", margin: "20px 0 15px" }}>
+            <div style={{
+              width: 80, height: 80, borderRadius: "50%", overflow: "hidden",
+              background: "rgba(255,255,255,0.03)", display: "flex", alignItems: "center", justifyContent: "center",
+              border: `2px solid ${TOKEN.amber}`, fontSize: 32, fontWeight: 700, color: TOKEN.amber,
+              boxShadow: `0 0 20px rgba(239, 159, 39, 0.15)`
+            }}>
+              {activeUser.avatar
+                ? <img src={activeUser.avatar} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt={activeUser.name} />
+                : activeUser.name.charAt(0).toUpperCase()
+              }
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: "#ffffff", marginTop: 12 }}>
+              {activeUser.name}
+            </div>
+            <button
+              onClick={() => {
+                if (settings.haptic) triggerHaptic("medium");
+                setScreen("user_select");
+              }}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: TOKEN.amber,
+                fontSize: 12,
+                cursor: "pointer",
+                marginTop: 6,
+                textDecoration: "underline"
+              }}
+            >
+              Switch User
+            </button>
+          </div>
+        )}
+
+        {/* Biometric trigger if active */}
+        {settings.biometric && (
+          <div style={{ display: "flex", justifyContent: "center", margin: "10px 0 15px" }}>
+            <button 
+              onClick={() => { if (settings.haptic) triggerHaptic("medium"); handleBiometric(); }} 
+              style={{ ...S.biometricCircle, width: 44, height: 44 } as any}
+              aria-label="Unlock with biometrics"
+            >
+              <FingerprintIcon size={22} color={TOKEN.amber} />
+            </button>
+          </div>
+        )}
 
         {/* Instruction Text */}
-        <div style={S.instructionText}>
-          <div style={S.unlockText}>Touch to unlock</div>
-          <div style={S.pinHint}>or enter PIN</div>
+        <div style={{ ...S.instructionText, marginTop: 10 }}>
+          <div style={S.unlockText}>Enter PIN to unlock</div>
         </div>
 
         {/* PIN Squares */}
-        <div style={S.pinRow}>
+        <div style={{ ...S.pinRow, margin: "15px 0" }}>
           {[0, 1, 2, 3].map((i) => {
             const filled = i < pinInput.length;
             return (
@@ -550,7 +1064,7 @@ export default function KharchaApp() {
         {settings.pin && (
           <div style={{
             display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
-            gap: 12, width: "100%", maxWidth: 240, margin: "30px auto 0",
+            gap: 12, width: "100%", maxWidth: 240, margin: "10px auto 0",
           }}>
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, "forgot", 0, "back"].map((n) => {
               if (n === "forgot") return (
@@ -594,6 +1108,7 @@ export default function KharchaApp() {
       </div>
     );
   }
+
 
   // ────────────────────────────────────────────────────────────────────────────
   function renderCat() {
@@ -663,7 +1178,7 @@ export default function KharchaApp() {
 
         <div style={{ color: TOKEN.muted, fontSize: 12, marginTop: 4 }}>Select category</div>
 
-        <div style={S.catGrid}>
+        <div style={{ ...S.catGrid, gridTemplateColumns: settings.layoutMode === "desktop" ? "repeat(auto-fill, minmax(100px, 1fr))" : "repeat(3, 1fr)" }}>
           {categories.map((cat) => {
             const total = categoryTotal(expenses, cat.id);
             return (
@@ -794,7 +1309,7 @@ export default function KharchaApp() {
         {/* Wallet Selector */}
         <div style={{ padding: "8px 0" }}>
           <div style={{ color: TOKEN.muted, fontSize: 10, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.1em" }}>Select Account</div>
-          <div style={S.walletGrid}>
+          <div style={{ ...S.walletGrid, gridTemplateColumns: settings.layoutMode === "desktop" ? "repeat(auto-fill, minmax(140px, 1fr))" : "repeat(2, minmax(0, 1fr))" }}>
             {WALLETS.map(w => (
               <button
                 key={w.id}
@@ -941,7 +1456,7 @@ export default function KharchaApp() {
           <div style={{ ...S.row, marginBottom: 8 }}>
             <div style={{ color: TOKEN.muted, fontSize: 12 }}>Accounts</div>
           </div>
-          <div style={S.walletGrid}>
+          <div style={{ ...S.walletGrid, gridTemplateColumns: settings.layoutMode === "desktop" ? "repeat(auto-fill, minmax(140px, 1fr))" : "repeat(2, minmax(0, 1fr))" }}>
             {wallets.map(w => {
               const balance = sumWalletBalance(expenses, w.id, w.initialBalance);
               return (
@@ -1075,7 +1590,7 @@ export default function KharchaApp() {
               <div style={{ ...S.label, marginBottom: 6 }}>
                 {dateLabel(date)} • {fmt(sumExpenses(groupedHistory[date]))}
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+              <div style={settings.layoutMode === "desktop" ? { display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" } : { display: "flex", flexDirection: "column", gap: 7 }}>
                 {groupedHistory[date].map((e) => (
                   <ExpenseRow key={e.id} expense={e} categories={categories} onDelete={deleteExpense} />
                 ))}
@@ -1178,6 +1693,12 @@ export default function KharchaApp() {
           val={settings.theme === "light"} 
           onChange={(v) => updateSetting("theme", v ? "light" : "dark")} 
         />
+        <TogRow 
+          label="Desktop Layout" 
+          sub="Use full screen width on large displays" 
+          val={settings.layoutMode === "desktop"} 
+          onChange={(v) => updateSetting("layoutMode", v ? "desktop" : "mobile")} 
+        />
 
         {/* Accent Color Picker */}
         <div style={{ padding: "12px 20px", borderBottom: `0.5px solid ${TOKEN.borderSub}` }}>
@@ -1253,6 +1774,20 @@ export default function KharchaApp() {
           <div style={{ flex: 1, textAlign: "left" }}>
             <div style={{ color: TOKEN.textSub, fontSize: 13 }}>Manage Accounts</div>
             <div style={{ color: TOKEN.muted, fontSize: 11 }}>Adjust starting balances and labels</div>
+          </div>
+          <span style={{ color: TOKEN.muted }}>›</span>
+        </button>
+        <button onClick={() => go("user_manage")} style={S.menuItem}>
+          <div style={{ flex: 1, textAlign: "left" }}>
+            <div style={{ color: TOKEN.textSub, fontSize: 13 }}>Manage Users</div>
+            <div style={{ color: TOKEN.muted, fontSize: 11 }}>Add, rename or delete user profiles</div>
+          </div>
+          <span style={{ color: TOKEN.muted }}>›</span>
+        </button>
+        <button onClick={() => go("user_select")} style={S.menuItem}>
+          <div style={{ flex: 1, textAlign: "left" }}>
+            <div style={{ color: TOKEN.amber, fontSize: 13, fontWeight: 600 }}>Switch User</div>
+            <div style={{ color: TOKEN.muted, fontSize: 11 }}>Currently: {settings.userName || "User"}</div>
           </div>
           <span style={{ color: TOKEN.muted }}>›</span>
         </button>
@@ -1482,6 +2017,7 @@ export default function KharchaApp() {
         expenses={expenses} 
         categories={categories} 
         settings={settings}
+        isDesktop={settings.layoutMode === "desktop"}
         onBack={() => go("dash")} 
       />
     );
@@ -1526,6 +2062,57 @@ export default function KharchaApp() {
     );
   }
 
+  function Sidebar() {
+    const tabs: { screen: ScreenName; icon: string; label: string }[] = [
+      { screen: "dash", icon: "📊", label: "Dashboard" },
+      { screen: "reports", icon: "📈", label: "Reports" },
+      { screen: "hist", icon: "🕒", label: "History" },
+      { screen: "set", icon: "⚙️", label: "Settings" },
+    ];
+
+    return (
+      <div style={S.sidebar}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, paddingBottom: 24, borderBottom: `1px solid ${TOKEN.borderSub}` }}>
+          <div style={{ width: 40, height: 40, borderRadius: "50%", background: TOKEN.amber, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+            {settings.profileImage ? <img src={settings.profileImage} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} alt="Profile" /> : "🪙"}
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, color: TOKEN.text, fontSize: 16 }}>Kharcha</div>
+            <div style={{ fontSize: 11, color: TOKEN.muted }}>{settings.userName || "User"}</div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
+          {tabs.map((t) => (
+            <button
+              key={t.screen}
+              onClick={() => {
+                if (settings.haptic) triggerHaptic("light");
+                go(t.screen);
+              }}
+              style={{
+                display: "flex", alignItems: "center", gap: 16, padding: "12px 16px", borderRadius: 12, border: "none", cursor: "pointer",
+                background: screen === t.screen ? "rgba(239, 159, 39, 0.1)" : "transparent",
+                color: screen === t.screen ? TOKEN.amber : TOKEN.textSub,
+                fontWeight: 600, fontSize: 14, transition: "all 0.2s"
+              }}
+            >
+              <span style={{ fontSize: 20 }}>{t.icon}</span>
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ padding: 16, background: TOKEN.surfaceHighlight, borderRadius: 16 }}>
+          <div style={{ fontSize: 11, color: TOKEN.muted, marginBottom: 8 }}>Total Savings</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: TOKEN.success }}>
+            ₹{sumIncome(expenses) - sumExpenses(expenses)}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   function BottomNav() {
     const tabs: { screen: ScreenName; icon: string; label: string }[] = [
       { screen: "dash", icon: "📊", label: "Dash" },
@@ -1558,10 +2145,13 @@ export default function KharchaApp() {
   }
 
   // ─── Root render ─────────────────────────────────────────────────────────────
+  const isDesktop = settings.layoutMode === "desktop";
+
   return (
     <div
       style={{
         ...S.root,
+        padding: isDesktop ? 0 : 16,
         ...(settings.accentColor ? {
           ["--token-amber" as any]: settings.accentColor,
           ["--token-amberText" as any]: settings.theme === "light" ? "#ffffff" : "#1a0a00",
@@ -1570,9 +2160,11 @@ export default function KharchaApp() {
       className={`app-root theme-${settings.theme || "dark"}`}
     >
       <GlobalStyles />
-      <div style={S.phone} className="app-phone">
-        <StatusBar />
-        <div style={S.body}>
+      <div style={isDesktop ? S.desktopContainer : S.phone} className={isDesktop ? "app-desktop" : "app-phone"}>
+        {!isDesktop && <StatusBar />}
+        {isDesktop && ["dash", "hist", "reports", "set"].includes(screen) && <Sidebar />}
+        <div style={isDesktop ? S.desktopContent : S.body}>
+          {screen === "user_select" && renderUserSelect()}
           {screen === "lock" && renderLock()}
           {screen === "cat" && renderCat()}
           {screen === "amt" && renderAmt()}
@@ -1585,10 +2177,12 @@ export default function KharchaApp() {
           {screen === "reports" && renderReports()}
           {screen === "subscriptions" && renderSubscriptions()}
           {screen === "manage_wallets" && renderManageWallets()}
+          {screen === "user_manage" && renderUserManage()}
         </div>
-        {["dash", "hist", "reports", "set"].includes(screen) && <BottomNav />}
-        <HomeBar />
+        {!isDesktop && ["dash", "hist", "reports", "set"].includes(screen) && <BottomNav />}
+        {!isDesktop && <HomeBar />}
       </div>
+      {renderCropModal()}
     </div>
   );
 }

@@ -21,6 +21,7 @@ interface ReportsScreenProps {
   expenses: Expense[];
   categories: Category[];
   settings: Settings;
+  isDesktop?: boolean;
   onBack: () => void;
 }
 
@@ -43,7 +44,7 @@ const AnimatedCounter = ({ value, prefix = "" }: { value: number; prefix?: strin
   return <span>{prefix}{Math.round(displayValue).toLocaleString("en-IN")}</span>;
 };
 
-export default function ReportsScreen({ expenses, categories, settings, onBack }: ReportsScreenProps) {
+export default function ReportsScreen({ expenses, categories, settings, isDesktop, onBack }: ReportsScreenProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "calendar" | "places" | "intelligence">("overview");
   const [trendDays, setTrendDays] = useState(30);
 
@@ -101,7 +102,7 @@ export default function ReportsScreen({ expenses, categories, settings, onBack }
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      <div style={isDesktop ? { display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" } : { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <div style={S.reportCard}>
           <div style={S.metricLabel}>Spent</div>
           <div style={S.metricValue}><AnimatedCounter value={totalSpent} prefix="₹" /></div>
@@ -125,7 +126,7 @@ export default function ReportsScreen({ expenses, categories, settings, onBack }
             ))}
           </div>
         </div>
-        <div style={{ height: 200, width: "100%", marginTop: 16 }}>
+        <div style={{ height: isDesktop ? 400 : 200, width: "100%", marginTop: 16 }}>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={trendData}>
               <defs>
@@ -206,7 +207,7 @@ export default function ReportsScreen({ expenses, categories, settings, onBack }
 
   const renderIntelligence = () => {
     return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={isDesktop ? { display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" } : { display: "flex", flexDirection: "column", gap: 16 }}>
         {/* Financial Forecast */}
         <div style={S.reportCard}>
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Month Forecast</div>
