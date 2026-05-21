@@ -2,7 +2,7 @@
 // SubComponents.tsx — Reusable UI widgets for Kharcha
 
 import { useState, useEffect, CSSProperties } from "react";
-import type { Expense, Category } from "./Types";
+import type { Expense, Category, BudgetGoal } from "./Types";
 import { S, TOKEN } from "./Styles";
 import { DAY_LABELS } from "./Constants";
 import { fmt, dateLabel } from "./Utils";
@@ -362,9 +362,10 @@ export function TogRow({ label, sub, val, onChange }: TogRowProps) {
 // ─── BarChart ─────────────────────────────────────────────────────────────────
 interface BarChartProps {
   data: number[];
+  currency?: string;
 }
 
-export function BarChart({ data }: BarChartProps) {
+export function BarChart({ data, currency = "₹" }: BarChartProps) {
   const max = Math.max(...data, 1);
   const todayIdx = (new Date().getDay() + 6) % 7;
 
@@ -377,7 +378,7 @@ export function BarChart({ data }: BarChartProps) {
           return (
             <div
               key={i}
-              title={v > 0 ? fmt(v) : "No data"}
+              title={v > 0 ? fmt(v, currency) : "No data"}
               style={{
                 flex: 1,
                 height: h,
@@ -427,10 +428,12 @@ export function CatIcon({ id, size = 18, color = "currentColor" }: { id: string;
 interface ExpenseRowProps {
   expense: Expense;
   onDelete: (id: string) => void;
-  categories: Category[]; // Added categories prop
+  onEdit?: (expense: Expense) => void;
+  categories: Category[];
+  currency?: string;
 }
 
-export function ExpenseRow({ expense, onDelete, categories }: ExpenseRowProps) {
+export function ExpenseRow({ expense, onDelete, onEdit, categories, currency = "₹" }: ExpenseRowProps) {
   const [swiped, setSwiped] = useState(false);
   const cat = categories.find((c) => c.id === expense.category) ?? categories[0];
 
@@ -438,7 +441,7 @@ export function ExpenseRow({ expense, onDelete, categories }: ExpenseRowProps) {
     <div
       style={{
         ...S.cardRow,
-        transform: swiped ? "translateX(-64px)" : "translateX(0)",
+        transform: swiped ? "translateX(-112px)" : "translateX(0)",
         transition: "transform 0.2s",
         cursor: "pointer",
       }}
@@ -453,46 +456,60 @@ export function ExpenseRow({ expense, onDelete, categories }: ExpenseRowProps) {
         </div>
         <div style={{ color: TOKEN.muted, fontSize: 11, marginTop: 2 }}>
           {cat.label} &bull; {new Date(expense.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+          {expense.type === "income" && <span style={{ color: TOKEN.success, marginLeft: 4, fontSize: 10 }}>+INCOME</span>}
+          {expense.isRecurring && <span style={{ color: TOKEN.amber, marginLeft: 4, fontSize: 10 }}>🔁</span>}
         </div>
       </div>
       <div
         style={{
-          color: TOKEN.text,
+          color: expense.type === "income" ? TOKEN.success : TOKEN.text,
           fontSize: 14,
           fontVariantNumeric: "tabular-nums",
           fontWeight: 500,
           fontFamily: TOKEN.mono,
         }}
       >
-        {fmt(expense.amount)}
+        {expense.type === "income" ? "+" : ""}{fmt(expense.amount, currency)}
       </div>
 
       {swiped && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(expense.id);
-          }}
-          style={S.deleteSlide}
-          aria-label="Delete expense"
-        >
-          🗑️
-        </button>
+        <div style={{ display: "flex", gap: 4, position: "absolute", right: 0 }}>
+          {onEdit && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setSwiped(false);
+                onEdit(expense);
+              }}
+              style={{
+                ...S.deleteSlide,
+                background: "rgba(55, 138, 221, 0.15)",
+                color: "#378ADD",
+                width: 48
+              }}
+              aria-label="Edit expense"
+            >
+              ✏️
+            </button>
+          )}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(expense.id);
+            }}
+            style={{ ...S.deleteSlide, width: 48 }}
+            aria-label="Delete expense"
+          >
+            🗑️
+          </button>
+        </div>
       )}
     </div>
   );
 }
 
 // ─── CategoryBar (dashboard breakdown) ───────────────────────────────────────
-interface CategoryBarProps {
-  icon: string;
-  label: string;
-  color: string;
-  total: number;
-  max: number;
-}
-
-export function CategoryBar({ category, total, max }: { category: Category; total: number; max: number }) {
+export function CategoryBar({ category, total, max, currency = "₹" }: { category: Category; total: number; max: number; currency?: string }) {
   const pct = Math.min(100, Math.round((total / max) * 100));
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -501,7 +518,7 @@ export function CategoryBar({ category, total, max }: { category: Category; tota
           <CatIcon id={category.icon} size={14} color={category.color} />
           <span style={{ color: TOKEN.textFaint, fontSize: 13 }}>{category.label}</span>
         </div>
-        <span style={{ color: TOKEN.textFaint, fontSize: 13, fontFamily: TOKEN.mono }}>{fmt(total)}</span>
+        <span style={{ color: TOKEN.textFaint, fontSize: 13, fontFamily: TOKEN.mono }}>{fmt(total, currency)}</span>
       </div>
       <div style={{ height: 5, background: TOKEN.surfaceHighlight, borderRadius: 3, overflow: "hidden" }}>
         <div style={{ width: `${pct}%`, height: "100%", background: category.color, borderRadius: 3, transition: "width 0.4s ease-out" }} />
@@ -511,19 +528,12 @@ export function CategoryBar({ category, total, max }: { category: Category; tota
 }
 
 // ─── BudgetCard ───────────────────────────────────────────────────────────────
-interface BudgetCardProps {
-  total: number;
-  budget: number;
-  count: number;
-  period: string;
-}
-
-export function BudgetCard({ total, count, date }: { total: number; count: number; date: string }) {
+export function BudgetCard({ total, count, date, currency = "₹" }: { total: number; count: number; date: string; currency?: string }) {
   return (
     <div style={S.todayBanner}>
       <div>
         <div style={{ color: TOKEN.muted, fontSize: 11 }}>Today's total</div>
-        <div style={{ color: TOKEN.amber, fontSize: 24, fontWeight: 500, fontFamily: TOKEN.mono }}>{fmt(total)}</div>
+        <div style={{ color: TOKEN.amber, fontSize: 24, fontWeight: 500, fontFamily: TOKEN.mono }}>{fmt(total, currency)}</div>
       </div>
       <div style={{ textAlign: "right" }}>
         <div style={{ color: "#44445A", fontSize: 11 }}>{count} expenses</div>
@@ -533,12 +543,68 @@ export function BudgetCard({ total, count, date }: { total: number; count: numbe
   );
 }
 
-export function OverviewCard({ total, sub }: { total: number; sub: string }) {
+export function OverviewCard({ total, sub, currency = "₹" }: { total: number; sub: string; currency?: string }) {
   return (
     <div style={{ ...S.card, padding: 18 }}>
       <div style={{ color: TOKEN.muted, fontSize: 11, marginBottom: 4 }}>Total spent</div>
-      <div style={{ fontSize: 40, fontWeight: 500, color: TOKEN.text, fontFamily: TOKEN.mono, letterSpacing: -1 }}>{fmt(total)}</div>
+      <div style={{ fontSize: 40, fontWeight: 500, color: TOKEN.text, fontFamily: TOKEN.mono, letterSpacing: -1 }}>{fmt(total, currency)}</div>
       <div style={{ color: TOKEN.muted, fontSize: 12, marginTop: 4 }}>{sub}</div>
     </div>
   );
 }
+
+// ─── BudgetGoalBar ────────────────────────────────────────────────────────────
+export function BudgetGoalBar({
+  category, spent, limit, currency = "₹"
+}: { category: Category; spent: number; limit: number; currency?: string }) {
+  const pct = Math.min(100, Math.round((spent / limit) * 100));
+  const isWarning = pct >= 80 && pct < 100;
+  const isOver    = pct >= 100;
+  const barColor  = isOver ? TOKEN.danger : isWarning ? "#EF9F27" : TOKEN.success;
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <CatIcon id={category.icon} size={14} color={category.color} />
+          <span style={{ color: TOKEN.textFaint, fontSize: 13 }}>{category.label}</span>
+          {isOver    && <span style={{ fontSize: 10, color: TOKEN.danger,  background: `${TOKEN.danger}22`,  padding: "2px 6px", borderRadius: 8 }}>OVER</span>}
+          {isWarning && <span style={{ fontSize: 10, color: TOKEN.amber,   background: `${TOKEN.amber}22`,   padding: "2px 6px", borderRadius: 8 }}>NEAR LIMIT</span>}
+        </div>
+        <span style={{ fontSize: 12, color: TOKEN.textFaint, fontFamily: TOKEN.mono }}>
+          {fmt(spent, currency)} / {fmt(limit, currency)}
+        </span>
+      </div>
+      <div style={{ height: 6, background: TOKEN.surfaceHighlight, borderRadius: 3, overflow: "hidden" }}>
+        <div style={{ width: `${pct}%`, height: "100%", background: barColor, borderRadius: 3, transition: "width 0.5s ease-out" }} />
+      </div>
+    </div>
+  );
+}
+
+// ─── SparkLine mini chart ─────────────────────────────────────────────────────
+export function SparkLine({ data, color = TOKEN.amber, height = 48 }: { data: number[]; color?: string; height?: number }) {
+  const max = Math.max(...data, 1);
+  const width = 300;
+  const pts = data.map((v, i) => {
+    const x = (i / (data.length - 1)) * width;
+    const y = height - (v / max) * (height - 4);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+
+  const fillPts = `0,${height} ${pts} ${width},${height}`;
+
+  return (
+    <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" style={{ display: "block" }}>
+      <defs>
+        <linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%"  stopColor={color} stopOpacity={0.3} />
+          <stop offset="100%" stopColor={color} stopOpacity={0} />
+        </linearGradient>
+      </defs>
+      <polygon points={fillPts} fill="url(#sparkGrad)" />
+      <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
+  );
+}
+

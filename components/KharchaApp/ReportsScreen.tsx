@@ -25,7 +25,7 @@ interface ReportsScreenProps {
   onBack: () => void;
 }
 
-const AnimatedCounter = ({ value, prefix = "" }: { value: number; prefix?: string }) => {
+const AnimatedCounter = ({ value, prefix = "", currency = "₹" }: { value: number; prefix?: string; currency?: string }) => {
   const [displayValue, setDisplayValue] = useState(0);
   useEffect(() => {
     let start = displayValue;
@@ -41,10 +41,12 @@ const AnimatedCounter = ({ value, prefix = "" }: { value: number; prefix?: strin
     };
     requestAnimationFrame(update);
   }, [value]);
-  return <span>{prefix}{Math.round(displayValue).toLocaleString("en-IN")}</span>;
+  const locale = currency === "₹" ? "en-IN" : "en-US";
+  return <span>{prefix}{Math.round(displayValue).toLocaleString(locale)}</span>;
 };
 
 export default function ReportsScreen({ expenses, categories, settings, isDesktop, onBack }: ReportsScreenProps) {
+  const currency = settings.currency || "₹";
   const [activeTab, setActiveTab] = useState<"overview" | "calendar" | "places" | "intelligence">("overview");
   const [trendDays, setTrendDays] = useState(30);
 
@@ -105,11 +107,11 @@ export default function ReportsScreen({ expenses, categories, settings, isDeskto
       <div style={isDesktop ? { display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" } : { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
         <div style={S.reportCard}>
           <div style={S.metricLabel}>Spent</div>
-          <div style={S.metricValue}><AnimatedCounter value={totalSpent} prefix="₹" /></div>
+          <div style={S.metricValue}><AnimatedCounter value={totalSpent} prefix={currency} currency={currency} /></div>
         </div>
         <div style={S.reportCard}>
           <div style={S.metricLabel}>Today</div>
-          <div style={{ ...S.metricValue, color: TOKEN.amber }}><AnimatedCounter value={daily?.total || 0} prefix="₹" /></div>
+          <div style={{ ...S.metricValue, color: TOKEN.amber }}><AnimatedCounter value={daily?.total || 0} prefix={currency} currency={currency} /></div>
         </div>
       </div>
 
@@ -197,7 +199,7 @@ export default function ReportsScreen({ expenses, categories, settings, isDeskto
             <div style={{ fontSize: 10, color: TOKEN.muted }}>{m.count} transactions</div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 14, fontWeight: 700, color: TOKEN.text, fontFamily: TOKEN.mono }}>{fmt(m.amount)}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: TOKEN.text, fontFamily: TOKEN.mono }}>{fmt(m.amount, currency)}</div>
             <div style={{ fontSize: 9, color: TOKEN.muted }}>{((m.amount / totalSpent) * 100).toFixed(1)}%</div>
           </div>
         </div>
@@ -212,13 +214,13 @@ export default function ReportsScreen({ expenses, categories, settings, isDeskto
         <div style={S.reportCard}>
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Month Forecast</div>
           <div style={{ fontSize: 10, color: TOKEN.muted, marginBottom: 12 }}>Predicted spending based on current habits</div>
-          <div style={{ fontSize: 24, fontWeight: 700, color: TOKEN.amber, fontFamily: TOKEN.mono }}>{fmt(forecast.predicted)}</div>
+          <div style={{ fontSize: 24, fontWeight: 700, color: TOKEN.amber, fontFamily: TOKEN.mono }}>{fmt(forecast.predicted, currency)}</div>
           <div style={{ height: 6, background: TOKEN.surfaceHighlight, borderRadius: 3, marginTop: 12, overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${Math.min(100, (forecast.spentSoFar / (forecast.predicted || 1)) * 100)}%`, background: TOKEN.amber }} />
           </div>
           <div style={{ ...S.row, marginTop: 8 }}>
             <div style={{ fontSize: 10, color: TOKEN.muted }}>Progress: {forecast.progress.toFixed(0)}% of month</div>
-            <div style={{ fontSize: 10, color: TOKEN.textSub }}>Avg: {fmt(forecast.avgPerDay)}/day</div>
+            <div style={{ fontSize: 10, color: TOKEN.textSub }}>Avg: {fmt(forecast.avgPerDay, currency)}/day</div>
           </div>
         </div>
 
@@ -228,11 +230,11 @@ export default function ReportsScreen({ expenses, categories, settings, isDeskto
           <div style={{ display: "flex", gap: 12 }}>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 10, color: TOKEN.muted }}>This Week</div>
-              <div style={{ fontSize: 16, fontWeight: 600 }}>{fmt(weekly.thisTotal)}</div>
+              <div style={{ fontSize: 16, fontWeight: 600 }}>{fmt(weekly.thisTotal, currency)}</div>
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 10, color: TOKEN.muted }}>Last Week</div>
-              <div style={{ fontSize: 16, fontWeight: 600 }}>{fmt(weekly.lastTotal)}</div>
+              <div style={{ fontSize: 16, fontWeight: 600 }}>{fmt(weekly.lastTotal, currency)}</div>
             </div>
           </div>
           <div style={{ marginTop: 12, fontSize: 11, color: weekly.diff > 0 ? TOKEN.danger : TOKEN.success }}>
@@ -250,11 +252,11 @@ export default function ReportsScreen({ expenses, categories, settings, isDeskto
           <div style={{ ...S.row, marginTop: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <div style={{ width: 8, height: 8, borderRadius: 4, background: TOKEN.amber }} />
-              <span style={{ fontSize: 10, color: TOKEN.muted }}>Weekdays ({fmt(weekly.weekdayTotal)})</span>
+              <span style={{ fontSize: 10, color: TOKEN.muted }}>Weekdays ({fmt(weekly.weekdayTotal, currency)})</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
               <div style={{ width: 8, height: 8, borderRadius: 4, background: "#378ADD" }} />
-              <span style={{ fontSize: 10, color: TOKEN.muted }}>Weekends ({fmt(weekly.weekendTotal)})</span>
+              <span style={{ fontSize: 10, color: TOKEN.muted }}>Weekends ({fmt(weekly.weekendTotal, currency)})</span>
             </div>
           </div>
         </div>
@@ -265,17 +267,17 @@ export default function ReportsScreen({ expenses, categories, settings, isDeskto
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={S.row}>
               <span style={{ fontSize: 12, color: TOKEN.textSub }}>Total Income</span>
-              <span style={{ fontSize: 12, color: TOKEN.success, fontWeight: 600 }}>+{fmt(totalIncome)}</span>
+              <span style={{ fontSize: 12, color: TOKEN.success, fontWeight: 600 }}>+{fmt(totalIncome, currency)}</span>
             </div>
             <div style={S.row}>
               <span style={{ fontSize: 12, color: TOKEN.textSub }}>Total Expenses</span>
-              <span style={{ fontSize: 12, color: TOKEN.danger, fontWeight: 600 }}>-{fmt(totalSpent)}</span>
+              <span style={{ fontSize: 12, color: TOKEN.danger, fontWeight: 600 }}>-{fmt(totalSpent, currency)}</span>
             </div>
             <div style={{ height: 1, background: TOKEN.border, margin: "4px 0" }} />
             <div style={S.row}>
               <span style={{ fontSize: 12, fontWeight: 700 }}>Net Savings</span>
               <span style={{ fontSize: 14, fontWeight: 700, color: (totalIncome - totalSpent) >= 0 ? TOKEN.success : TOKEN.danger }}>
-                {fmt(totalIncome - totalSpent)}
+                {fmt(totalIncome - totalSpent, currency)}
               </span>
             </div>
           </div>

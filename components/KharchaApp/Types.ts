@@ -1,4 +1,4 @@
-export type ScreenName = "lock" | "cat" | "amt" | "dash" | "hist" | "set" | "manage_cats" | "change_pin" | "registry" | "reports" | "subscriptions" | "manage_wallets" | "user_select" | "user_manage";
+export type ScreenName = "lock" | "cat" | "amt" | "dash" | "hist" | "set" | "manage_cats" | "change_pin" | "registry" | "reports" | "subscriptions" | "manage_wallets" | "user_select" | "user_manage" | "budget_goals" | "monthly_breakdown";
 export type PeriodName = "today" | "week" | "month";
 export type RecurrenceFrequency = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -17,6 +17,11 @@ export interface Wallet {
   icon: string;
   color: string;
   initialBalance?: number;
+}
+
+export interface BudgetGoal {
+  categoryId: string;
+  limit: number; // monthly cap in local currency
 }
 
 export interface Expense {
@@ -49,6 +54,8 @@ export interface Settings {
   customCategories?: Category[];
   wallets?: Wallet[];
   defaultWalletId?: string;
+  currency?: "₹" | "$" | "€" | "£";
+  budgetGoals?: BudgetGoal[];
 }
 
 export interface UserProfile {

@@ -8,8 +8,8 @@
  *   export default function Page() { return <KharchaApp />; }
  */
 
-import { useState, useEffect, useCallback } from "react";
-import type { ScreenName, PeriodName, Category, Expense, Settings, Wallet, UserProfile } from "./Types";
+import { useState, useEffect, useCallback, useRef } from "react";
+import type { ScreenName, PeriodName, Category, Expense, Settings, Wallet, UserProfile, BudgetGoal } from "./Types";
 import { CATEGORIES, AMOUNT_PRESETS, DEFAULT_SETTINGS, STORAGE_KEYS, WALLETS, CATEGORY_KEYWORDS, getUserStorageKeys } from "./Constants";
 import {
   fmt, todayKey, greeting, dateLabel,
@@ -17,6 +17,7 @@ import {
   filterByPeriod, sumExpenses, sumIncome, sumWalletBalance, categoryTotal,
   weeklyTotals, groupByDate, generateId, smartMatchCategory,
   triggerHaptic, HapticType,
+  parseCSVToExpenses, getDayByDayMonthly,
 } from "./Utils";
 import { S, TOKEN } from "./Styles";
 
@@ -67,6 +68,7 @@ import {
   BarChart, ExpenseRow, CategoryBar, BudgetCard,
   CatIcon, ArrowLeftIcon, BellIcon, PlusIcon, OverviewCard,
   GlobalStyles, BiometricOverlay, ArrowDownIcon,
+  BudgetGoalBar, SparkLine,
 } from "./SubComponents";
 import ReportsScreen from "./ReportsScreen";
 
@@ -124,6 +126,18 @@ export default function KharchaApp() {
   const [bioStatus, setBioStatus] = useState<null | "scanning" | "success" | "fail">(null);
   const [loginSuccess, setLoginSuccess] = useState(false);
 
+  // ── Edit Expense state ───────────────────────────────────────────────────────
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+
+  // ── Budget Goals state ───────────────────────────────────────────────────────
+  const [budgetGoals, setBudgetGoals] = useState<BudgetGoal[]>([]);
+
+  // ── Budget alert dismissed ───────────────────────────────────────────────────
+  const [budgetAlertDismissed, setBudgetAlertDismissed] = useState(false);
+
+  // ── CSV import ref ───────────────────────────────────────────────────────────
+  const csvInputRef = useRef<HTMLInputElement>(null);
+
   // ── Load from storage (multi-user aware) ─────────────────────────────────────
   useEffect(() => {
     // Load user directory
@@ -153,6 +167,7 @@ export default function KharchaApp() {
       setSettings(legacySett);
       setCategories(legacySett.customCategories || CATEGORIES);
       setWallets(legacySett.wallets || WALLETS);
+      setBudgetGoals(legacySett.budgetGoals || []);
 
       // Route directly based on security settings
       if (legacySett.pin || legacySett.biometric) {
@@ -172,6 +187,7 @@ export default function KharchaApp() {
       setSettings(savedSet);
       setCategories(savedSet.customCategories || CATEGORIES);
       setWallets(savedSet.wallets || WALLETS);
+      setBudgetGoals(savedSet.budgetGoals || []);
 
       // Route directly based on security settings
       if (savedSet.pin || savedSet.biometric) {
@@ -434,9 +450,9 @@ export default function KharchaApp() {
   useEffect(() => {
     if (!hasLoaded || !activeUserId) return;
     const userKeys = getUserStorageKeys(activeUserId);
-    const nextSettings = { ...settings, customCategories: categories };
+    const nextSettings = { ...settings, customCategories: categories, budgetGoals };
     saveStorage(userKeys.SETTINGS, nextSettings);
-  }, [settings, categories, hasLoaded, activeUserId]);
+  }, [settings, categories, budgetGoals, hasLoaded, activeUserId]);
 
   const clearPin = () => setPinInput("");
 
@@ -458,6 +474,8 @@ export default function KharchaApp() {
     setSettings(newSet);
     setCategories(newSet.customCategories || CATEGORIES);
     setWallets(newSet.wallets || WALLETS);
+    setBudgetGoals(newSet.budgetGoals || []);
+    setBudgetAlertDismissed(false);
     setPinInput("");
     setLoginSuccess(false);
     setBioStatus(null);
@@ -516,21 +534,40 @@ export default function KharchaApp() {
 
     setIsSaving(true);
     if (settings.haptic) triggerHaptic("success");
-    const e: Expense = {
-      id: generateId(),
-      category: selCat.id,
-      amount: amtVal,
-      note: note.trim(),
-      createdAt: new Date(txDate + "T12:00:00").toISOString(),
-      type: txType,
-      walletId: selWalletId,
-      isRecurring: isRecurring,
-      frequency: isRecurring ? "monthly" : undefined,
-    };
-    setExpenses((prev) => [e, ...prev]);
+
+    if (editingExpense) {
+      // Edit mode: update in-place
+      const updated: Expense = {
+        ...editingExpense,
+        category: selCat.id,
+        amount: amtVal,
+        note: note.trim(),
+        createdAt: new Date(txDate + "T12:00:00").toISOString(),
+        type: txType,
+        walletId: selWalletId,
+        isRecurring: isRecurring,
+        frequency: isRecurring ? "monthly" : undefined,
+      };
+      setExpenses((prev) => prev.map((e) => e.id === updated.id ? updated : e));
+    } else {
+      // Create mode: prepend new entry
+      const e: Expense = {
+        id: generateId(),
+        category: selCat.id,
+        amount: amtVal,
+        note: note.trim(),
+        createdAt: new Date(txDate + "T12:00:00").toISOString(),
+        type: txType,
+        walletId: selWalletId,
+        isRecurring: isRecurring,
+        frequency: isRecurring ? "monthly" : undefined,
+      };
+      setExpenses((prev) => [e, ...prev]);
+    }
 
     setTimeout(() => {
       setIsSaving(false);
+      setEditingExpense(null);
       setNote("");
       setAmtVal(150);
       setTxType("expense");
@@ -538,11 +575,49 @@ export default function KharchaApp() {
       setTxDate(new Date().toISOString().slice(0, 10));
       go("dash");
     }, 900);
-  }, [selCat, amtVal, note, go, isSaving, txType, selWalletId, isRecurring, txDate]);
+  }, [selCat, amtVal, note, go, isSaving, txType, selWalletId, isRecurring, txDate, editingExpense]);
 
   const deleteExpense = useCallback((id: string) => {
     setExpenses((prev) => prev.filter((e) => e.id !== id));
   }, []);
+
+  const editExpense = useCallback((updated: Expense) => {
+    setExpenses((prev) => prev.map((e) => e.id === updated.id ? updated : e));
+    if (settings.haptic) triggerHaptic("success");
+  }, [settings.haptic]);
+
+  const handleEditOpen = useCallback((expense: Expense) => {
+    setEditingExpense(expense);
+    setSelCat(CATEGORIES.find(c => c.id === expense.category) || CATEGORIES[0]);
+    setAmtVal(expense.amount);
+    setAmtInput(expense.amount.toString());
+    setNote(expense.note || "");
+    setTxType(expense.type || "expense");
+    setSelWalletId(expense.walletId || "cash");
+    setIsRecurring(expense.isRecurring || false);
+    setTxDate(expense.createdAt.slice(0, 10));
+    go("amt");
+  }, [go]);
+
+  const handleCSVImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const imported = parseCSVToExpenses(text, expenses);
+      if (imported.length === 0) {
+        alert("No new expenses found. Make sure the CSV has date and amount columns.");
+        return;
+      }
+      setExpenses(prev => [...imported, ...prev]);
+      if (settings.haptic) triggerHaptic("success");
+      alert(`✅ Imported ${imported.length} expense${imported.length !== 1 ? "s" : ""} successfully!`);
+    };
+    reader.readAsText(file);
+    // Reset input so same file can be re-imported
+    e.target.value = "";
+  }, [expenses, settings.haptic]);
 
   // ── Global keyboard support ──────────────────────────────────────────────────
   useEffect(() => {
@@ -1239,14 +1314,16 @@ export default function KharchaApp() {
       <div style={S.screenPad}>
         {/* Header */}
         <div style={S.row}>
-          <button onClick={() => { go("cat"); setAmtInput(""); setShowKeypad(false); }} style={S.iconBtn} aria-label="Back">
+          <button onClick={() => { go(editingExpense ? "hist" : "cat"); setAmtInput(""); setShowKeypad(false); setEditingExpense(null); }} style={S.iconBtn} aria-label="Back">
             <ArrowLeftIcon color={TOKEN.dim} />
           </button>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{ ...S.picon, background: selCat.bg, width: 28, height: 28 }}>
               <CatIcon id={selCat.icon} size={14} color={selCat.color} />
             </div>
-            <span style={{ color: TOKEN.text, fontSize: 15, fontWeight: 500 }}>{selCat.label}</span>
+            <span style={{ color: TOKEN.text, fontSize: 15, fontWeight: 500 }}>
+              {editingExpense ? `Edit — ${selCat.label}` : selCat.label}
+            </span>
           </div>
           <div style={{ width: 34 }} />
         </div>
@@ -1404,7 +1481,7 @@ export default function KharchaApp() {
             marginTop: 10
           }}
         >
-          {isSaving ? "✓ Saved!" : "Save Expense"}
+          {isSaving ? "✓ Saved!" : editingExpense ? "Update Expense" : "Save Expense"}
         </button>
       </div>
     );
@@ -1430,6 +1507,46 @@ export default function KharchaApp() {
             )}
           </div>
         </div>
+
+        {/* Budget Alert Banner */}
+        {!budgetAlertDismissed && todayTotal > settings.dailyBudget && (
+          <div style={{
+            padding: "12px 16px",
+            background: `${TOKEN.danger}15`,
+            borderRadius: 16,
+            border: `1px solid ${TOKEN.danger}40`,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            marginBottom: 4,
+          }}>
+            <span style={{ fontSize: 22 }}>⚠️</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: TOKEN.danger, fontSize: 13, fontWeight: 600 }}>Daily budget exceeded!</div>
+              <div style={{ color: TOKEN.muted, fontSize: 11 }}>
+                Spent {fmt(todayTotal, settings.currency || "₹")} of {fmt(settings.dailyBudget, settings.currency || "₹")} today
+              </div>
+            </div>
+            <button onClick={() => setBudgetAlertDismissed(true)} style={{ background: "none", border: "none", color: TOKEN.muted, cursor: "pointer", fontSize: 18, lineHeight: 1 }}>✕</button>
+          </div>
+        )}
+
+        {/* Budget Goals quick link */}
+        {budgetGoals.length > 0 && (
+          <button
+            onClick={() => go("budget_goals")}
+            style={{ ...S.card, flexDirection: "row", alignItems: "center", gap: 12, cursor: "pointer", border: `1px solid ${TOKEN.amber}30` }}
+          >
+            <span style={{ fontSize: 20 }}>🎯</span>
+            <div style={{ flex: 1, textAlign: "left" }}>
+              <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 600 }}>Budget Goals</div>
+              <div style={{ color: TOKEN.muted, fontSize: 11 }}>
+                {budgetGoals.filter(g => categoryTotal(expenses, g.categoryId) >= g.limit).length} category{budgetGoals.filter(g => categoryTotal(expenses, g.categoryId) >= g.limit).length !== 1 ? "ies" : "y"} at limit this month
+              </div>
+            </div>
+            <span style={{ color: TOKEN.amber }}>›</span>
+          </button>
+        )}
 
         <div style={S.tabRow}>
           {(["today", "week", "month"] as PeriodName[]).map((p) => (
@@ -1519,7 +1636,7 @@ export default function KharchaApp() {
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {expenses.slice(0, 3).map((e) => (
-            <ExpenseRow key={e.id} expense={e} categories={categories} onDelete={deleteExpense} />
+            <ExpenseRow key={e.id} expense={e} categories={categories} onDelete={deleteExpense} onEdit={handleEditOpen} currency={settings.currency || "₹"} />
           ))}
         </div>
 
@@ -1529,6 +1646,19 @@ export default function KharchaApp() {
             <span style={{ color: TOKEN.amberText, fontSize: 14, fontWeight: 500 }}>Add expense</span>
           </button>
         </div>
+
+        {/* Monthly breakdown quick link */}
+        <button
+          onClick={() => go("monthly_breakdown")}
+          style={{ ...S.card, flexDirection: "row", alignItems: "center", gap: 12, cursor: "pointer", marginBottom: 4 }}
+        >
+          <span style={{ fontSize: 20 }}>📅</span>
+          <div style={{ flex: 1, textAlign: "left" }}>
+            <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 600 }}>Monthly Breakdown</div>
+            <div style={{ color: TOKEN.muted, fontSize: 11 }}>Day-by-day spending for this month</div>
+          </div>
+          <span style={{ color: TOKEN.amber }}>›</span>
+        </button>
       </div>
     );
   }
@@ -1541,7 +1671,22 @@ export default function KharchaApp() {
         <div style={S.row}>
           <button onClick={() => go("dash")} style={S.iconBtn} aria-label="Back">←</button>
           <div style={S.heading}>History</div>
-          <div style={{ width: 34 }} />
+          <button onClick={() => {
+            // Quick Excel export from history
+            import("xlsx").then(XLSX => {
+              const data = filteredExpenses.map(e => ({
+                Date: e.createdAt.slice(0, 10),
+                Type: e.type || "expense",
+                Category: categories.find(c => c.id === e.category)?.label || e.category,
+                Amount: e.amount,
+                Note: e.note,
+              }));
+              const ws = XLSX.utils.json_to_sheet(data);
+              const wb = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(wb, ws, "Expenses");
+              XLSX.writeFile(wb, `Kharcha_${new Date().toISOString().slice(0,10)}.xlsx`);
+            });
+          }} style={S.iconBtn} title="Export Excel">📊</button>
         </div>
 
         {/* Search */}
@@ -1588,11 +1733,11 @@ export default function KharchaApp() {
           historyDates.map((date) => (
             <div key={date}>
               <div style={{ ...S.label, marginBottom: 6 }}>
-                {dateLabel(date)} • {fmt(sumExpenses(groupedHistory[date]))}
+                {dateLabel(date)} • {fmt(sumExpenses(groupedHistory[date]), settings.currency || "₹")}
               </div>
               <div style={settings.layoutMode === "desktop" ? { display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" } : { display: "flex", flexDirection: "column", gap: 7 }}>
                 {groupedHistory[date].map((e) => (
-                  <ExpenseRow key={e.id} expense={e} categories={categories} onDelete={deleteExpense} />
+                  <ExpenseRow key={e.id} expense={e} categories={categories} onDelete={deleteExpense} onEdit={handleEditOpen} currency={settings.currency || "₹"} />
                 ))}
               </div>
             </div>
@@ -1658,7 +1803,7 @@ export default function KharchaApp() {
             }}
           >
             <div style={{ 
-              width: 32, height: 32, borderRadius: 8, background: settings.biometric ? "${TOKEN.surfaceElevated}" : TOKEN.surfaceElevated,
+              width: 32, height: 32, borderRadius: 8, background: TOKEN.surfaceElevated,
               display: "flex", alignItems: "center", justifyContent: "center"
             }}>
               <FingerprintIcon size={20} color={settings.biometric ? TOKEN.amber : TOKEN.muted} />
@@ -1763,6 +1908,13 @@ export default function KharchaApp() {
         </div>
 
         <SectionLabel>Preferences</SectionLabel>
+        <button onClick={() => go("budget_goals")} style={S.menuItem}>
+          <div style={{ flex: 1, textAlign: "left" }}>
+            <div style={{ color: TOKEN.textSub, fontSize: 13 }}>Budget Goals</div>
+            <div style={{ color: TOKEN.muted, fontSize: 11 }}>Set monthly spend caps per category</div>
+          </div>
+          <span style={{ color: TOKEN.muted }}>›</span>
+        </button>
         <button onClick={() => go("manage_cats")} style={S.menuItem}>
           <div style={{ flex: 1, textAlign: "left" }}>
             <div style={{ color: TOKEN.textSub, fontSize: 13 }}>Manage Categories</div>
@@ -1795,6 +1947,30 @@ export default function KharchaApp() {
         <TogRow label="Haptic feedback" sub="Vibrate on amount change" val={settings.haptic} onChange={(v) => updateSetting("haptic", v)} />
         <TogRow label="Offline mode" sub="Cache entries locally" val={settings.offline} onChange={(v) => updateSetting("offline", v)} />
 
+        {/* Currency Selector */}
+        <div style={{ padding: "12px 20px", borderBottom: `0.5px solid ${TOKEN.borderSub}` }}>
+          <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 500, marginBottom: 10 }}>Currency</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            {(["₹", "$", "€", "£"] as const).map(c => {
+              const isActive = (settings.currency || "₹") === c;
+              return (
+                <button
+                  key={c}
+                  onClick={() => updateSetting("currency", c)}
+                  style={{
+                    flex: 1, padding: "10px 0", borderRadius: 12, border: "none", cursor: "pointer",
+                    background: isActive ? TOKEN.amber : TOKEN.surfaceHighlight,
+                    color: isActive ? "#fff" : TOKEN.textSub,
+                    fontWeight: isActive ? 700 : 400,
+                    fontSize: 18,
+                    transition: "all 0.2s"
+                  }}
+                >{c}</button>
+              );
+            })}
+          </div>
+        </div>
+
         <SectionLabel>Budget</SectionLabel>
         <div style={{ padding: "0 20px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -1820,6 +1996,25 @@ export default function KharchaApp() {
           >
             <div style={{ color: TOKEN.text, fontSize: 13, fontWeight: 500 }}>Manage Subscriptions</div>
             <span style={{ color: TOKEN.amber }}>➜</span>
+          </button>
+
+          {/* CSV Import */}
+          <input
+            ref={csvInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            style={{ display: "none" }}
+            onChange={handleCSVImport}
+          />
+          <button
+            onClick={() => csvInputRef.current?.click()}
+            style={{ ...S.card, flexDirection: "row", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
+          >
+            <div>
+              <div style={{ color: TOKEN.text, fontSize: 13, fontWeight: 500 }}>Import CSV</div>
+              <div style={{ color: TOKEN.muted, fontSize: 11 }}>Columns: date, amount, category, note, type</div>
+            </div>
+            <span style={{ color: TOKEN.amber, fontSize: 18 }}>⬆️</span>
           </button>
           <div style={{ ...S.card, flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
             <div>
@@ -2011,6 +2206,192 @@ export default function KharchaApp() {
     );
   }
 
+  function renderBudgetGoals() {
+    const cur = settings.currency || "₹";
+    return (
+      <div style={S.screenBase}>
+        <div style={{ ...S.row, padding: "20px 20px 12px", borderBottom: `0.5px solid ${TOKEN.border}` }}>
+          <button onClick={() => go("set")} style={S.iconBtn} aria-label="Back"><ArrowLeftIcon color={TOKEN.dim} /></button>
+          <div style={S.heading}>Budget Goals</div>
+          <div style={{ width: 34 }} />
+        </div>
+
+        <div style={{ padding: "16px 20px 0", color: TOKEN.muted, fontSize: 12 }}>
+          Set monthly spending caps per category. Tap a category to set or update its limit.
+        </div>
+
+        <div style={{ flex: 1, overflowY: "auto", padding: "12px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
+          {categories.map(cat => {
+            const goal = budgetGoals.find(g => g.categoryId === cat.id);
+            const spent = categoryTotal(expenses, cat.id);
+
+            return (
+              <div key={cat.id} style={{ ...S.card, gap: 16 }}>
+                {goal ? (
+                  <BudgetGoalBar category={cat} spent={spent} limit={goal.limit} currency={cur} />
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ ...S.picon, background: cat.bg }}>
+                      <CatIcon id={cat.icon} size={16} color={cat.color} />
+                    </div>
+                    <span style={{ color: TOKEN.textSub, fontSize: 13, flex: 1 }}>{cat.label}</span>
+                    <span style={{ color: TOKEN.muted, fontSize: 11 }}>No limit set</span>
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button
+                    onClick={() => {
+                      const val = window.prompt(`Monthly limit for ${cat.label} (${cur}):`, goal?.limit?.toString() || "");
+                      if (val === null) return;
+                      const num = parseFloat(val.replace(/[^0-9.]/g, ""));
+                      if (isNaN(num) || num <= 0) {
+                        setBudgetGoals(prev => prev.filter(g => g.categoryId !== cat.id));
+                      } else {
+                        setBudgetGoals(prev => {
+                          const existing = prev.findIndex(g => g.categoryId === cat.id);
+                          if (existing >= 0) {
+                            const next = [...prev];
+                            next[existing] = { categoryId: cat.id, limit: num };
+                            return next;
+                          }
+                          return [...prev, { categoryId: cat.id, limit: num }];
+                        });
+                      }
+                      if (settings.haptic) triggerHaptic("medium");
+                    }}
+                    style={{
+                      flex: 1, padding: "8px", background: goal ? TOKEN.surfaceHighlight : TOKEN.amber,
+                      border: "none", borderRadius: 10, cursor: "pointer",
+                      color: goal ? TOKEN.textSub : "#fff",
+                      fontSize: 12, fontWeight: 600
+                    }}
+                  >
+                    {goal ? `Edit Limit (${cur}${goal.limit.toLocaleString("en-IN")})` : `+ Set Limit`}
+                  </button>
+                  {goal && (
+                    <button
+                      onClick={() => { setBudgetGoals(prev => prev.filter(g => g.categoryId !== cat.id)); if (settings.haptic) triggerHaptic("medium"); }}
+                      style={{ padding: "8px 12px", background: "none", border: `1px solid ${TOKEN.danger}40`, borderRadius: 10, cursor: "pointer", color: TOKEN.danger, fontSize: 12 }}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  function renderMonthlyBreakdown() {
+    const cur = settings.currency || "₹";
+    const now = new Date();
+    const monthName = now.toLocaleString("default", { month: "long", year: "numeric" });
+    const dayData = getDayByDayMonthly(expenses);
+    const totalThisMonth = dayData.reduce((s, d) => s + d.total, 0);
+    const daysInMonth = dayData.length;
+    const currentDay = now.getDate();
+    const avgPerDay = currentDay > 0 ? totalThisMonth / currentDay : 0;
+    const remaining = settings.monthlyBudget - totalThisMonth;
+    const dailyRemaining = remaining > 0 && currentDay < daysInMonth
+      ? remaining / (daysInMonth - currentDay)
+      : 0;
+    const sparkData = dayData.map(d => d.total);
+    const peakDay = dayData.reduce((best, d) => d.total > best.total ? d : best, { day: 0, total: 0 });
+
+    return (
+      <div style={S.screenBase}>
+        <div style={{ ...S.row, padding: "20px 20px 12px", borderBottom: `0.5px solid ${TOKEN.border}` }}>
+          <button onClick={() => go("dash")} style={S.iconBtn} aria-label="Back"><ArrowLeftIcon color={TOKEN.dim} /></button>
+          <div style={S.heading}>{monthName}</div>
+          <div style={{ width: 34 }} />
+        </div>
+
+        <div style={{ flex: 1, overflowY: "auto", padding: "12px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
+
+          {/* Summary stats */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {[
+              { label: "Spent", value: fmt(totalThisMonth, cur), color: TOKEN.amber },
+              { label: "Budget left", value: remaining >= 0 ? fmt(remaining, cur) : `-${fmt(-remaining, cur)}`, color: remaining >= 0 ? TOKEN.success : TOKEN.danger },
+              { label: "Avg / day", value: fmt(avgPerDay, cur), color: TOKEN.text },
+              { label: "Safe daily", value: dailyRemaining > 0 ? fmt(dailyRemaining, cur) : "—", color: TOKEN.text },
+            ].map(s => (
+              <div key={s.label} style={{ ...S.card, padding: 14 }}>
+                <div style={{ color: TOKEN.muted, fontSize: 10, marginBottom: 4 }}>{s.label}</div>
+                <div style={{ color: s.color, fontSize: 16, fontWeight: 700, fontFamily: TOKEN.mono }}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Sparkline */}
+          <div style={{ ...S.card, gap: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: TOKEN.textSub }}>Daily Spending</div>
+              {peakDay.total > 0 && (
+                <div style={{ fontSize: 11, color: TOKEN.muted }}>Peak: Day {peakDay.day} ({fmt(peakDay.total, cur)})</div>
+              )}
+            </div>
+            <SparkLine data={sparkData} height={64} color={TOKEN.amber} />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: TOKEN.muted }}>
+              <span>1</span>
+              <span>{Math.floor(daysInMonth / 2)}</span>
+              <span>{daysInMonth}</span>
+            </div>
+          </div>
+
+          {/* Budget progress */}
+          <div style={{ ...S.card, gap: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: TOKEN.textSub }}>Monthly Budget</div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: TOKEN.muted }}>
+              <span>{fmt(totalThisMonth, cur)} spent</span>
+              <span>{fmt(settings.monthlyBudget, cur)} budget</span>
+            </div>
+            <div style={{ height: 8, background: TOKEN.surfaceHighlight, borderRadius: 4, overflow: "hidden" }}>
+              <div style={{
+                height: "100%",
+                width: `${Math.min(100, (totalThisMonth / settings.monthlyBudget) * 100)}%`,
+                background: totalThisMonth > settings.monthlyBudget ? TOKEN.danger : TOKEN.amber,
+                borderRadius: 4,
+                transition: "width 0.5s ease-out"
+              }} />
+            </div>
+            <div style={{ fontSize: 11, color: TOKEN.muted }}>
+              {currentDay} of {daysInMonth} days elapsed ({Math.round((currentDay / daysInMonth) * 100)}% of month)
+            </div>
+          </div>
+
+          {/* Day-by-day list (non-zero days only) */}
+          <div style={{ ...S.card, gap: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: TOKEN.textSub, marginBottom: 4 }}>Day-by-Day</div>
+            {dayData.filter(d => d.total > 0).length === 0 ? (
+              <div style={{ color: TOKEN.muted, fontSize: 13, textAlign: "center", padding: "16px 0" }}>No expenses this month yet.</div>
+            ) : (
+              dayData.filter(d => d.total > 0).map(d => {
+                const pct = Math.min(100, (d.total / (peakDay.total || 1)) * 100);
+                return (
+                  <div key={d.day} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ width: 28, textAlign: "right", color: TOKEN.muted, fontSize: 11, flexShrink: 0 }}>
+                      {d.day}
+                    </div>
+                    <div style={{ flex: 1, height: 6, background: TOKEN.surfaceHighlight, borderRadius: 3, overflow: "hidden" }}>
+                      <div style={{ width: `${pct}%`, height: "100%", background: TOKEN.amber, borderRadius: 3, transition: "width 0.4s" }} />
+                    </div>
+                    <div style={{ width: 72, textAlign: "right", color: TOKEN.text, fontSize: 12, fontFamily: TOKEN.mono, flexShrink: 0 }}>
+                      {fmt(d.total, cur)}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   function renderReports() {
     return (
       <ReportsScreen 
@@ -2178,6 +2559,8 @@ export default function KharchaApp() {
           {screen === "subscriptions" && renderSubscriptions()}
           {screen === "manage_wallets" && renderManageWallets()}
           {screen === "user_manage" && renderUserManage()}
+          {screen === "budget_goals" && renderBudgetGoals()}
+          {screen === "monthly_breakdown" && renderMonthlyBreakdown()}
         </div>
         {!isDesktop && ["dash", "hist", "reports", "set"].includes(screen) && <BottomNav />}
         {!isDesktop && <HomeBar />}

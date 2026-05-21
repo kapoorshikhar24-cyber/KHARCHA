@@ -1,7 +1,8 @@
 import { Expense, PeriodName, Category } from "./Types";
 
-export function fmt(n: number) {
-  return "₹" + Math.round(Number(n)).toLocaleString("en-IN");
+export function fmt(n: number, currency: string = "₹") {
+  const locale = currency === "₹" ? "en-IN" : "en-US";
+  return currency + Math.round(Number(n)).toLocaleString(locale);
 }
 
 export function todayKey() {
@@ -361,3 +362,84 @@ export function triggerHaptic(type: HapticType = "light") {
     console.warn("Haptic feedback failed", e);
   }
 }
+
+// ─── CSV Import ───────────────────────────────────────────────────────────────
+
+export function parseCSVToExpenses(csv: string, existingExpenses: Expense[]): Expense[] {
+  const lines = csv.split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return [];
+
+  const header = lines[0].split(",").map(h => h.trim().toLowerCase().replace(/"/g, ""));
+  const dateIdx   = header.findIndex(h => h.includes("date"));
+  const amtIdx    = header.findIndex(h => h.includes("amount") || h.includes("amt"));
+  const catIdx    = header.findIndex(h => h.includes("category") || h.includes("cat"));
+  const noteIdx   = header.findIndex(h => h.includes("note") || h.includes("desc"));
+  const typeIdx   = header.findIndex(h => h.includes("type"));
+
+  if (dateIdx < 0 || amtIdx < 0) return [];
+
+  // Build a dedup set from existing expenses
+  const existingKeys = new Set(
+    existingExpenses.map(e =>
+      `${e.createdAt.slice(0, 10)}|${e.amount}|${e.category}|${e.note}`
+    )
+  );
+
+  const result: Expense[] = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(",").map(c => c.trim().replace(/"/g, ""));
+    const rawDate = dateIdx >= 0 ? cols[dateIdx] : "";
+    const rawAmt  = amtIdx  >= 0 ? cols[amtIdx]  : "0";
+    const rawCat  = catIdx  >= 0 ? cols[catIdx]?.toLowerCase() : "other";
+    const rawNote = noteIdx >= 0 ? cols[noteIdx]  : "";
+    const rawType = typeIdx >= 0 ? cols[typeIdx]?.toLowerCase() : "expense";
+
+    const amount = parseFloat(rawAmt.replace(/[^0-9.]/g, ""));
+    if (isNaN(amount) || amount <= 0) continue;
+
+    // Normalise date to ISO
+    let isoDate = rawDate;
+    const parts = rawDate.match(/(\d{1,4})[\/\-](\d{1,2})[\/\-](\d{1,4})/);
+    if (parts) {
+      const [, a, b, c] = parts;
+      isoDate = a.length === 4 ? `${a}-${b.padStart(2,"0")}-${c.padStart(2,"0")}`
+              : `${c}-${b.padStart(2,"0")}-${a.padStart(2,"0")}`;
+    }
+
+    const dedup = `${isoDate}|${amount}|${rawCat}|${rawNote}`;
+    if (existingKeys.has(dedup)) continue;
+    existingKeys.add(dedup);
+
+    result.push({
+      id: generateId(),
+      category: rawCat || "other",
+      amount,
+      note: rawNote,
+      createdAt: new Date(isoDate + "T12:00:00").toISOString(),
+      type: rawType === "income" ? "income" : "expense",
+    });
+  }
+
+  return result;
+}
+
+// ─── Month day-by-day breakdown ───────────────────────────────────────────────
+
+export function getDayByDayMonthly(expenses: Expense[]) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const result: { day: number; total: number }[] = [];
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const key = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+    const dayTotal = expenses
+      .filter(e => e.createdAt.startsWith(key) && e.type !== "income")
+      .reduce((s, e) => s + e.amount, 0);
+    result.push({ day: d, total: dayTotal });
+  }
+  return result;
+}
+

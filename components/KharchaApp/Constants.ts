@@ -54,4 +54,5 @@ export const DEFAULT_SETTINGS: Settings = {
   userEmail: "",
   wallets: WALLETS,
   defaultWalletId: "cash",
+  currency: "₹",
 };
