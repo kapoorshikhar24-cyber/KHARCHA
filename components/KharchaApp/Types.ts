@@ -9,6 +9,7 @@ export interface Category {
   color: string;
   bg: string;
   defaultAmount?: number;
+  type?: "expense" | "income";
 }
 
 export interface Wallet {

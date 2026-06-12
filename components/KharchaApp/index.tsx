@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { ScreenName, PeriodName, Category, Expense, Settings, Wallet, UserProfile, BudgetGoal } from "./Types";
-import { CATEGORIES, AMOUNT_PRESETS, DEFAULT_SETTINGS, STORAGE_KEYS, WALLETS, CATEGORY_KEYWORDS, getUserStorageKeys } from "./Constants";
+import { CATEGORIES, INCOME_CATEGORIES, AMOUNT_PRESETS, DEFAULT_SETTINGS, STORAGE_KEYS, WALLETS, CATEGORY_KEYWORDS, getUserStorageKeys } from "./Constants";
 import {
   fmt, todayKey, greeting, dateLabel,
   loadStorage, saveStorage,
@@ -20,6 +20,8 @@ import {
   parseCSVToExpenses, getDayByDayMonthly,
 } from "./Utils";
 import { S, TOKEN } from "./Styles";
+
+const ALL_CATEGORIES = [...CATEGORIES, ...INCOME_CATEGORIES];
 
 // ─── WebAuthn Helpers ────────────────────────────────────────────────────────
 const bufferToBase64url = (buffer: ArrayBuffer | Uint8Array) => {
@@ -103,7 +105,7 @@ export default function KharchaApp() {
   const [rotation, setRotation] = useState<number>(0);
 
   // ── Categories ──────────────────────────────────────────────────────────────
-  const [categories, setCategories] = useState<Category[]>(CATEGORIES);
+  const [categories, setCategories] = useState<Category[]>(ALL_CATEGORIES);
 
   // ── Dashboard ────────────────────────────────────────────────────────────────
   const [period, setPeriod] = useState<PeriodName>("today");
@@ -112,6 +114,7 @@ export default function KharchaApp() {
   // ── History ──────────────────────────────────────────────────────────────────
   const [histCat, setHistCat] = useState<string>("all");
   const [histSearch, setHistSearch] = useState<string>("");
+  const [manageCatType, setManageCatType] = useState<"expense" | "income">("expense");
 
   // ── Voice ────────────────────────────────────────────────────────────────────
   const [voiceOpen, setVoiceOpen] = useState<boolean>(false);
@@ -131,6 +134,14 @@ export default function KharchaApp() {
 
   // ── Budget Goals state ───────────────────────────────────────────────────────
   const [budgetGoals, setBudgetGoals] = useState<BudgetGoal[]>([]);
+
+  // ── Category management state ────────────────────────────────────────────────
+  const [editingCat, setEditingCat] = useState<Category | null>(null);
+  const [catLabel, setCatLabel] = useState<string>("");
+  const [catIcon, setCatIcon] = useState<string>("🍔");
+  const [catColor, setCatColor] = useState<string>("#EF9F27");
+  const [catDefaultAmount, setCatDefaultAmount] = useState<string>("");
+  const [isCatFormOpen, setIsCatFormOpen] = useState<boolean>(false);
 
   // ── Budget alert dismissed ───────────────────────────────────────────────────
   const [budgetAlertDismissed, setBudgetAlertDismissed] = useState(false);
@@ -165,7 +176,7 @@ export default function KharchaApp() {
       setActiveUserId(newId);
       setExpenses(legacyExp);
       setSettings(legacySett);
-      setCategories(legacySett.customCategories || CATEGORIES);
+      setCategories(legacySett.customCategories || ALL_CATEGORIES);
       setWallets(legacySett.wallets || WALLETS);
       setBudgetGoals(legacySett.budgetGoals || []);
 
@@ -185,7 +196,7 @@ export default function KharchaApp() {
       const savedSet = loadStorage<Settings>(userKeys.SETTINGS, DEFAULT_SETTINGS);
       setExpenses(savedExp);
       setSettings(savedSet);
-      setCategories(savedSet.customCategories || CATEGORIES);
+      setCategories(savedSet.customCategories || ALL_CATEGORIES);
       setWallets(savedSet.wallets || WALLETS);
       setBudgetGoals(savedSet.budgetGoals || []);
 
@@ -472,7 +483,7 @@ export default function KharchaApp() {
     saveStorage(STORAGE_KEYS.ACTIVE_USER, userId);
     setExpenses(newExp);
     setSettings(newSet);
-    setCategories(newSet.customCategories || CATEGORIES);
+    setCategories(newSet.customCategories || ALL_CATEGORIES);
     setWallets(newSet.wallets || WALLETS);
     setBudgetGoals(newSet.budgetGoals || []);
     setBudgetAlertDismissed(false);
@@ -1251,39 +1262,62 @@ export default function KharchaApp() {
           </div>
         )}
 
-        <div style={{ color: TOKEN.muted, fontSize: 12, marginTop: 4 }}>Select category</div>
+        {/* Expense/Income Toggle in Category Screen */}
+        <div style={{ ...S.tabRow, marginBottom: 12, marginTop: 8 }}>
+          {(["expense", "income"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => { setTxType(t); if (settings.haptic) triggerHaptic("light"); }}
+              style={{
+                flex: 1, padding: 8, borderRadius: 8, border: "none", cursor: "pointer",
+                background: txType === t ? (t === "income" ? TOKEN.success : TOKEN.amber) : "transparent",
+                color: txType === t ? "#fff" : TOKEN.muted,
+                fontWeight: 600,
+                fontSize: 12,
+                textTransform: "uppercase",
+                letterSpacing: "0.05em"
+              }}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ color: TOKEN.muted, fontSize: 12, marginTop: 4, marginBottom: 8 }}>Select category</div>
 
         <div style={{ ...S.catGrid, gridTemplateColumns: settings.layoutMode === "desktop" ? "repeat(auto-fill, minmax(100px, 1fr))" : "repeat(3, 1fr)" }}>
-          {categories.map((cat) => {
-            const total = categoryTotal(expenses, cat.id);
-            return (
-              <button
-                key={cat.id}
-                onClick={() => {
-                  if (settings.haptic) triggerHaptic("light");
-                  setSelCat(cat);
-                  if (cat.defaultAmount) {
-                    setAmtVal(cat.defaultAmount);
-                    setAmtInput(cat.defaultAmount.toString());
-                  } else {
-                    setAmtVal(150);
-                    setAmtInput("");
-                  }
-                  go("amt");
-                }}
-                style={{
-                  ...S.catBtn,
-                  borderColor: selCat.id === cat.id ? cat.color : TOKEN.borderSub,
-                }}
-              >
-                <div style={{ ...S.picon, background: cat.bg }}>
-                  <CatIcon id={cat.icon} size={18} color={cat.color} />
-                </div>
-                <div style={{ color: "#E0DEDB", fontSize: 14, fontWeight: 500 }}>{cat.label}</div>
-                {total > 0 && <div style={{ color: TOKEN.muted, fontSize: 10 }}>{fmt(total)} this month</div>}
-              </button>
-            );
-          })}
+          {categories
+            .filter((cat) => (cat.type || "expense") === txType)
+            .map((cat) => {
+              const total = categoryTotal(expenses, cat.id);
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => {
+                    if (settings.haptic) triggerHaptic("light");
+                    setSelCat(cat);
+                    if (cat.defaultAmount) {
+                      setAmtVal(cat.defaultAmount);
+                      setAmtInput(cat.defaultAmount.toString());
+                    } else {
+                      setAmtVal(150);
+                      setAmtInput("");
+                    }
+                    go("amt");
+                  }}
+                  style={{
+                    ...S.catBtn,
+                    borderColor: selCat.id === cat.id ? cat.color : TOKEN.borderSub,
+                  }}
+                >
+                  <div style={{ ...S.picon, background: cat.bg }}>
+                    <CatIcon id={cat.icon} size={18} color={cat.color} />
+                  </div>
+                  <div style={{ color: "#E0DEDB", fontSize: 14, fontWeight: 500 }}>{cat.label}</div>
+                  {total > 0 && <div style={{ color: TOKEN.muted, fontSize: 10 }}>{fmt(total)} this month</div>}
+                </button>
+              );
+            })}
         </div>
       </div>
     );
@@ -1327,13 +1361,25 @@ export default function KharchaApp() {
           </div>
           <div style={{ width: 34 }} />
         </div>
-
         {/* Expense/Income Toggle */}
         <div style={{ ...S.tabRow, marginBottom: 8 }}>
           {(["expense", "income"] as const).map((t) => (
             <button
               key={t}
-              onClick={() => { setTxType(t); if (settings.haptic) triggerHaptic("light"); }}
+              onClick={() => {
+                const nextType = t;
+                setTxType(nextType);
+                if (settings.haptic) triggerHaptic("light");
+                // Update selected category if it doesn't match the new transaction type
+                const matchingCats = categories.filter(c => (c.type || "expense") === nextType);
+                if (matchingCats.length > 0 && (selCat.type || "expense") !== nextType) {
+                  setSelCat(matchingCats[0]);
+                  if (matchingCats[0].defaultAmount) {
+                    setAmtVal(matchingCats[0].defaultAmount);
+                    setAmtInput(matchingCats[0].defaultAmount.toString());
+                  }
+                }
+              }}
               style={{
                 flex: 1, padding: 8, borderRadius: 8, border: "none", cursor: "pointer",
                 background: txType === t ? (t === "income" ? TOKEN.success : TOKEN.amber) : "transparent",
@@ -1347,6 +1393,46 @@ export default function KharchaApp() {
               {t}
             </button>
           ))}
+        </div>
+
+        {/* Category Selection Row */}
+        <div style={{ display: "flex", gap: 8, overflowX: "auto", padding: "8px 0 16px", marginBottom: 8 }}>
+          {categories
+            .filter((c) => (c.type || "expense") === txType)
+            .map((c) => {
+              const active = selCat.id === c.id;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => {
+                    setSelCat(c);
+                    if (settings.haptic) triggerHaptic("light");
+                    if (c.defaultAmount) {
+                      setAmtVal(c.defaultAmount);
+                      setAmtInput(c.defaultAmount.toString());
+                    }
+                  }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    whiteSpace: "nowrap",
+                    padding: "6px 12px",
+                    borderRadius: 20,
+                    fontSize: 12,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    border: `1px solid ${active ? c.color : TOKEN.borderSub}`,
+                    background: active ? `${c.color}22` : TOKEN.surface,
+                    color: active ? c.color : TOKEN.textSub,
+                    transition: "all 0.2s"
+                  }}
+                >
+                  <CatIcon id={c.icon} size={14} color={active ? c.color : TOKEN.muted} />
+                  <span>{c.label}</span>
+                </button>
+              );
+            })}
         </div>
 
         {/* Note Input */}
@@ -2111,67 +2197,7 @@ export default function KharchaApp() {
     );
   }
 
-  function renderManageCats() {
-    return (
-      <div style={S.screenBase}>
-        <div style={{ ...S.row, padding: "20px 20px 12px", borderBottom: `0.5px solid ${TOKEN.border}` }}>
-          <button onClick={() => go("set")} style={S.iconBtn} aria-label="Back">←</button>
-          <div style={S.heading}>Categories</div>
-          <div style={{ width: 34 }} />
-        </div>
-        <div style={{ flex: 1, overflowY: "auto", padding: "10px 20px" }}>
-          {categories.map((cat, idx) => (
-            <div key={cat.id} style={{ ...S.togRow, padding: "12px 0", flexWrap: "wrap", gap: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ ...S.picon, background: cat.bg }}>
-                  <CatIcon id={cat.icon} size={18} color={cat.color} />
-                </div>
-                <div style={{ color: TOKEN.textSub }}>
-                  {cat.label}
-                  {cat.defaultAmount && <div style={{ fontSize: 10, color: TOKEN.muted }}>Default: {fmt(cat.defaultAmount)}</div>}
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 8, marginLeft: "auto" }}>
-                <button onClick={() => {
-                  const amtStr = window.prompt("Set default amount (leave blank to clear):", cat.defaultAmount?.toString() || "");
-                  if (amtStr !== null) {
-                    const parsed = parseInt(amtStr);
-                    const updated = { ...cat, defaultAmount: isNaN(parsed) ? undefined : parsed };
-                    setCategories(prev => prev.map(c => c.id === cat.id ? updated : c));
-                  }
-                }} style={{ background: "none", border: `1px solid ${TOKEN.border}`, borderRadius: 6, padding: "4px 8px", color: TOKEN.textSub, cursor: "pointer", fontSize: 11 }}>
-                  Set Default
-                </button>
-                <button onClick={() => {
-                  setCategories(prev => prev.filter((_, i) => i !== idx));
-                }} style={{ background: "none", border: "none", color: TOKEN.danger, cursor: "pointer", fontSize: 12 }}>Delete</button>
-              </div>
-            </div>
-          ))}
-          <div style={{ marginTop: 20, padding: 14, background: TOKEN.surface, borderRadius: 12, border: `1.5px dashed ${TOKEN.border}`, textAlign: "center", color: TOKEN.muted, fontSize: 13, cursor: "pointer" }}
-            onClick={() => {
-              const name = window.prompt("Category Name?");
-              const icon = window.prompt("Icon (Emoji)?") || "📦";
-              const amtStr = window.prompt("Default Amount (optional)?");
-              if (name) {
-                const parsedAmt = amtStr ? parseInt(amtStr) : undefined;
-                const newCat: Category = {
-                  id: name.toLowerCase().replace(/\s+/g, "_"),
-                  label: name,
-                  icon: icon,
-                  color: TOKEN.amber,
-                  bg: TOKEN.surfaceElevated,
-                  defaultAmount: isNaN(parsedAmt as number) ? undefined : parsedAmt
-                };
-                setCategories(prev => [...prev, newCat]);
-              }
-            }}>
-            + Add New Category
-          </div>
-        </div>
-      </div>
-    );
-  }
+
 
   function renderSubscriptions() {
     const subs = expenses.filter(e => e.isRecurring);
@@ -2439,6 +2465,276 @@ export default function KharchaApp() {
             </div>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  function renderManageCats() {
+    const activeCats = categories.filter((c) => (c.type || "expense") === manageCatType);
+
+    const handleSaveCategory = () => {
+      if (!catLabel.trim()) {
+        alert("Please enter a category label.");
+        return;
+      }
+      if (!catIcon.trim()) {
+        alert("Please enter a category icon (e.g. an emoji).");
+        return;
+      }
+
+      const newCat: Category = {
+        id: editingCat ? editingCat.id : generateId(),
+        label: catLabel.trim(),
+        icon: catIcon.trim(),
+        color: catColor,
+        bg: "var(--token-surfaceElevated)",
+        type: manageCatType,
+        defaultAmount: parseFloat(catDefaultAmount) || undefined
+      };
+
+      let nextCats: Category[];
+      if (editingCat) {
+        nextCats = categories.map((c) => (c.id === editingCat.id ? newCat : c));
+      } else {
+        nextCats = [...categories, newCat];
+      }
+
+      setCategories(nextCats);
+      updateSetting("customCategories", nextCats);
+
+      // Reset
+      setEditingCat(null);
+      setCatLabel("");
+      setCatIcon("🍔");
+      setCatColor("#EF9F27");
+      setCatDefaultAmount("");
+      setIsCatFormOpen(false);
+      if (settings.haptic) triggerHaptic("success");
+    };
+
+    const handleDeleteCategory = (catId: string) => {
+      if (categories.filter(c => (c.type || "expense") === manageCatType).length <= 1) {
+        alert("You must keep at least one category for this type.");
+        return;
+      }
+
+      if (window.confirm("Delete this category? Associated history won't be deleted, but it will fallback to the default category icon.")) {
+        const nextCats = categories.filter(c => c.id !== catId);
+        setCategories(nextCats);
+        updateSetting("customCategories", nextCats);
+        if (settings.haptic) triggerHaptic("medium");
+      }
+    };
+
+    const handleEditOpen = (cat: Category) => {
+      setEditingCat(cat);
+      setCatLabel(cat.label);
+      setCatIcon(cat.icon);
+      setCatColor(cat.color);
+      setCatDefaultAmount(cat.defaultAmount ? cat.defaultAmount.toString() : "");
+      setIsCatFormOpen(true);
+      if (settings.haptic) triggerHaptic("light");
+    };
+
+    const emojis = ["🍔", "🚗", "🔌", "🛍️", "🏠", "🧾", "💵", "💻", "📈", "📦", "💡", "🍿", "🏥", "🏋️", "🎓", "🎁", "🐕", "☕", "☕", "✈️", "🚕", "🛒"];
+    const colors = ["#EF9F27", "#378ADD", "#1D9E75", "#7F77DD", "#D85A30", "#639922", "#E24B4A", "#F06292"];
+
+    return (
+      <div style={S.screenPad}>
+        <div style={S.row}>
+          <button onClick={() => go("set")} style={S.iconBtn} aria-label="Back"><ArrowLeftIcon color={TOKEN.dim} /></button>
+          <div style={S.heading}>Categories</div>
+          <button onClick={() => {
+            setEditingCat(null);
+            setCatLabel("");
+            setCatIcon("🍔");
+            setCatColor("#EF9F27");
+            setCatDefaultAmount("");
+            setIsCatFormOpen(true);
+            if (settings.haptic) triggerHaptic("light");
+          }} style={S.iconBtn} aria-label="Add Category">+</button>
+        </div>
+
+        {/* Expense/Income Toggle */}
+        <div style={{ ...S.tabRow, marginTop: 16, marginBottom: 12 }}>
+          {(["expense", "income"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => { setManageCatType(t); if (settings.haptic) triggerHaptic("light"); }}
+              style={{
+                flex: 1, padding: 8, borderRadius: 8, border: "none", cursor: "pointer",
+                background: manageCatType === t ? (t === "income" ? TOKEN.success : TOKEN.amber) : "transparent",
+                color: manageCatType === t ? "#fff" : TOKEN.muted,
+                fontWeight: 600,
+                fontSize: 12,
+                textTransform: "uppercase",
+                letterSpacing: "0.05em"
+              }}
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+
+        {/* Category List */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 12 }}>
+          {activeCats.map((cat) => (
+            <div key={cat.id} style={{ ...S.cardRow, padding: "12px 14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ ...S.picon, background: cat.bg }}>
+                  <CatIcon id={cat.icon} size={18} color={cat.color} />
+                </div>
+                <div>
+                  <div style={{ color: TOKEN.text, fontSize: 14, fontWeight: 500 }}>{cat.label}</div>
+                  {cat.defaultAmount && (
+                    <div style={{ color: TOKEN.muted, fontSize: 11, marginTop: 2 }}>
+                      Default: {fmt(cat.defaultAmount, settings.currency || "₹")}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={() => handleEditOpen(cat)}
+                  style={{ background: "none", border: `1px solid ${TOKEN.border}`, borderRadius: 8, padding: "6px 12px", color: TOKEN.textSub, cursor: "pointer", fontSize: 11 }}
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDeleteCategory(cat.id)}
+                  style={{ background: "none", border: "none", color: TOKEN.danger, cursor: "pointer", fontSize: 11, padding: "6px" }}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Add/Edit Modal */}
+        {isCatFormOpen && (
+          <div style={{
+            position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+            background: "rgba(0,0,0,0.85)", display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20
+          }}>
+            <div style={{
+              background: TOKEN.surface, borderRadius: 24, padding: 24, width: "100%", maxWidth: 340,
+              display: "flex", flexDirection: "column", gap: 16, border: `1px solid ${TOKEN.border}`
+            }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: TOKEN.text, textAlign: "center" }}>
+                {editingCat ? "Edit Category" : "Add Category"}
+              </div>
+
+              {/* Preview Circle */}
+              <div style={{
+                width: 60, height: 60, borderRadius: "50%",
+                background: "var(--token-surfaceElevated)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                alignSelf: "center", border: `2px solid ${catColor}`,
+                fontSize: 24, boxShadow: `0 0 16px ${catColor}33`
+              }}>
+                <CatIcon id={catIcon} size={24} color={catColor} />
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {/* Label Input */}
+                <div>
+                  <div style={{ color: TOKEN.muted, fontSize: 11, marginBottom: 4 }}>Label</div>
+                  <div style={S.card}>
+                    <input
+                      type="text"
+                      value={catLabel}
+                      onChange={(e) => setCatLabel(e.target.value)}
+                      placeholder="e.g. Groceries, Rent"
+                      style={S.noteInput}
+                    />
+                  </div>
+                </div>
+
+                {/* Default Amount Input */}
+                <div>
+                  <div style={{ color: TOKEN.muted, fontSize: 11, marginBottom: 4 }}>Default Amount (Optional)</div>
+                  <div style={S.card}>
+                    <input
+                      type="number"
+                      value={catDefaultAmount}
+                      onChange={(e) => setCatDefaultAmount(e.target.value)}
+                      placeholder="e.g. 500"
+                      style={S.noteInput}
+                    />
+                  </div>
+                </div>
+
+                {/* Icon Selection */}
+                <div>
+                  <div style={{ color: TOKEN.muted, fontSize: 11, marginBottom: 4 }}>Icon (Emoji or Text)</div>
+                  <div style={{ ...S.card, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <input
+                      type="text"
+                      value={catIcon}
+                      onChange={(e) => setCatIcon(e.target.value)}
+                      placeholder="Emoji"
+                      style={{ ...S.noteInput, width: 60, textAlign: "center" }}
+                    />
+                    <div style={{ display: "flex", gap: 4, overflowX: "auto", flex: 1, padding: "2px 0" }}>
+                      {emojis.map(e => (
+                        <button
+                          key={e}
+                          onClick={() => setCatIcon(e)}
+                          style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", padding: 2 }}
+                        >
+                          {e}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Color Selection */}
+                <div>
+                  <div style={{ color: TOKEN.muted, fontSize: 11, marginBottom: 4 }}>Color</div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", marginTop: 4 }}>
+                    {colors.map(color => {
+                      const active = catColor === color;
+                      return (
+                        <button
+                          key={color}
+                          onClick={() => setCatColor(color)}
+                          style={{
+                            width: 28, height: 28, borderRadius: "50%",
+                            background: color,
+                            border: active ? `3px solid ${TOKEN.text}` : "3px solid transparent",
+                            cursor: "pointer",
+                            boxShadow: active ? `0 0 8px ${color}` : "none",
+                            transition: "all 0.2s",
+                            outline: "none"
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+                <button
+                  onClick={() => setIsCatFormOpen(false)}
+                  style={{ flex: 1, padding: "12px", background: "transparent", border: `1px solid ${TOKEN.border}`, borderRadius: 12, color: TOKEN.textSub, cursor: "pointer", fontSize: 13, fontWeight: 600 }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveCategory}
+                  style={{ flex: 1, padding: "12px", background: manageCatType === "income" ? TOKEN.success : TOKEN.amber, border: "none", borderRadius: 12, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

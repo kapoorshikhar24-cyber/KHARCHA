@@ -420,7 +420,7 @@ export function CatIcon({ id, size = 18, color = "currentColor" }: { id: string;
     case "shopping": return <ShoppingBagIcon size={size} color={color} />;
     case "lodging":  return <BuildingIcon size={size} color={color} />;
     case "bills":    return <ReceiptIcon size={size} color={color} />;
-    default:         return <span style={{ fontSize: size }}>📦</span>;
+    default:         return <span style={{ fontSize: size }}>{id}</span>;
   }
 }
 

@@ -1,12 +1,19 @@
 import { Category, Settings, Wallet } from "./Types";
 
 export const CATEGORIES: Category[] = [
-  { id: "food",     label: "Food",     icon: "food",     color: "#EF9F27", bg: "var(--token-surfaceElevated)" },
-  { id: "travel",   label: "Travel",   icon: "travel",   color: "#378ADD", bg: "var(--token-surfaceElevated)" },
-  { id: "fuel",     label: "Fuel",     icon: "fuel",     color: "#D85A30", bg: "var(--token-surfaceElevated)" },
-  { id: "shopping", label: "Shopping", icon: "shopping", color: "#7F77DD", bg: "var(--token-surfaceElevated)" },
-  { id: "lodging",  label: "Lodging",  icon: "lodging",  color: "#1D9E75", bg: "var(--token-surfaceElevated)" },
-  { id: "bills",    label: "Bills",    icon: "bills",    color: "#639922", bg: "var(--token-surfaceElevated)" },
+  { id: "food",     label: "Food",     icon: "food",     color: "#EF9F27", bg: "var(--token-surfaceElevated)", type: "expense" },
+  { id: "travel",   label: "Travel",   icon: "travel",   color: "#378ADD", bg: "var(--token-surfaceElevated)", type: "expense" },
+  { id: "fuel",     label: "Fuel",     icon: "fuel",     color: "#D85A30", bg: "var(--token-surfaceElevated)", type: "expense" },
+  { id: "shopping", label: "Shopping", icon: "shopping", color: "#7F77DD", bg: "var(--token-surfaceElevated)", type: "expense" },
+  { id: "lodging",  label: "Lodging",  icon: "lodging",  color: "#1D9E75", bg: "var(--token-surfaceElevated)", type: "expense" },
+  { id: "bills",    label: "Bills",    icon: "bills",    color: "#639922", bg: "var(--token-surfaceElevated)", type: "expense" },
+];
+
+export const INCOME_CATEGORIES: Category[] = [
+  { id: "salary",      label: "Salary",      icon: "💵", color: "#1D9E75", bg: "var(--token-surfaceElevated)", type: "income" },
+  { id: "freelance",   label: "Freelance",   icon: "💻", color: "#378ADD", bg: "var(--token-surfaceElevated)", type: "income" },
+  { id: "investments", label: "Investments", icon: "📈", color: "#7F77DD", bg: "var(--token-surfaceElevated)", type: "income" },
+  { id: "other_inc",   label: "Other",       icon: "📦", color: "#EF9F27", bg: "var(--token-surfaceElevated)", type: "income" },
 ];
 
 export const WALLETS: Wallet[] = [
