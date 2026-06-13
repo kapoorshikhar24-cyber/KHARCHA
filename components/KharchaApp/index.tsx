@@ -68,7 +68,7 @@ import {
   StatusBar, HomeBar, Toggle, FingerprintIcon,
   SectionLabel, TogRow,
   BarChart, ExpenseRow, CategoryBar, BudgetCard,
-  CatIcon, ArrowLeftIcon, BellIcon, PlusIcon, OverviewCard,
+  CatIcon, ArrowLeftIcon, BellIcon, PlusIcon,
   GlobalStyles, BiometricOverlay, ArrowDownIcon,
   BudgetGoalBar, SparkLine,
 } from "./SubComponents";
@@ -145,6 +145,25 @@ export default function KharchaApp() {
 
   // ── Budget alert dismissed ───────────────────────────────────────────────────
   const [budgetAlertDismissed, setBudgetAlertDismissed] = useState(false);
+
+  // ── Responsive Layout State ──────────────────────────────────────────────────
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateLayout = () => {
+      if (settings.layoutMode === "desktop") {
+        setIsDesktop(true);
+      } else if (settings.layoutMode === "mobile") {
+        setIsDesktop(false);
+      } else {
+        setIsDesktop(window.innerWidth > 768);
+      }
+    };
+    updateLayout();
+    window.addEventListener("resize", updateLayout);
+    return () => window.removeEventListener("resize", updateLayout);
+  }, [settings.layoutMode]);
 
   // ── CSV import ref ───────────────────────────────────────────────────────────
   const csvInputRef = useRef<HTMLInputElement>(null);
@@ -881,7 +900,7 @@ export default function KharchaApp() {
         background: "linear-gradient(160deg, #0b0b10 0%, #10101a 60%, #0d0d16 100%)",
         display: "flex", flexDirection: "column", alignItems: "center",
         justifyContent: "center", padding: "40px 24px", boxSizing: "border-box", gap: 0
-      }}>
+      }} className="screen-enter">
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: 48 }}>
           <div style={{
@@ -990,7 +1009,7 @@ export default function KharchaApp() {
 
   function renderUserManage() {
     return (
-      <div style={S.screenPad}>
+      <div style={S.screenPad} className="screen-enter">
         <div style={S.row}>
           <button onClick={() => go("set")} style={S.iconBtn} aria-label="Back"><ArrowLeftIcon color={TOKEN.dim} /></button>
           <div style={S.heading}>Manage Users</div>
@@ -1067,7 +1086,7 @@ export default function KharchaApp() {
         gap: 0,
         ...(shake ? { animation: "shake 0.4s ease-in-out" } : {}),
         ...(loginSuccess ? S.pulseSuccess : {}),
-      } as any}>
+      } as any} className="screen-enter">
         {bioStatus && <BiometricOverlay status={bioStatus} onCancel={() => setBioStatus(null)} />}
 
         {/* Header */}
@@ -1164,7 +1183,7 @@ export default function KharchaApp() {
                 }}>⌫</button>
               );
               return (
-                <button key={n} onClick={() => handlePinInput(n.toString())} style={{
+                <button key={n} onClick={() => handlePinInput(n.toString())} className="key-btn" style={{
                   background: "rgba(255,255,255,0.03)", 
                   border: "none",
                   borderRadius: 10, 
@@ -1199,7 +1218,7 @@ export default function KharchaApp() {
   // ────────────────────────────────────────────────────────────────────────────
   function renderCat() {
     return (
-      <div style={S.screenPad}>
+      <div style={S.screenPad} className="screen-enter">
         {/* Header */}
         <div style={{ ...S.row, marginBottom: 4 }}>
           <div>
@@ -1285,7 +1304,7 @@ export default function KharchaApp() {
 
         <div style={{ color: TOKEN.muted, fontSize: 12, marginTop: 4, marginBottom: 8 }}>Select category</div>
 
-        <div style={{ ...S.catGrid, gridTemplateColumns: settings.layoutMode === "desktop" ? "repeat(auto-fill, minmax(100px, 1fr))" : "repeat(3, 1fr)" }}>
+        <div style={{ ...S.catGrid, gridTemplateColumns: isDesktop ? "repeat(auto-fill, minmax(100px, 1fr))" : "repeat(3, 1fr)" }}>
           {categories
             .filter((cat) => (cat.type || "expense") === txType)
             .map((cat) => {
@@ -1305,9 +1324,11 @@ export default function KharchaApp() {
                     }
                     go("amt");
                   }}
+                  className="cat-btn"
                   style={{
                     ...S.catBtn,
                     borderColor: selCat.id === cat.id ? cat.color : TOKEN.borderSub,
+                    boxShadow: selCat.id === cat.id ? `0 0 16px ${cat.color}25` : "none",
                   }}
                 >
                   <div style={{ ...S.picon, background: cat.bg }}>
@@ -1345,7 +1366,7 @@ export default function KharchaApp() {
     };
 
     return (
-      <div style={S.screenPad}>
+      <div style={S.screenPad} className="screen-enter">
         {/* Header */}
         <div style={S.row}>
           <button onClick={() => { go(editingExpense ? "hist" : "cat"); setAmtInput(""); setShowKeypad(false); setEditingExpense(null); }} style={S.iconBtn} aria-label="Back">
@@ -1436,7 +1457,7 @@ export default function KharchaApp() {
         </div>
 
         {/* Note Input */}
-        <div style={S.card}>
+        <div style={S.card} className="card">
           <div style={{ color: TOKEN.muted, fontSize: 11, marginBottom: 6 }}>Note</div>
           <input
             autoFocus={!showKeypad}
@@ -1458,7 +1479,7 @@ export default function KharchaApp() {
         </div>
 
         {/* Date Input */}
-        <div style={S.card}>
+        <div style={S.card} className="card">
           <div style={{ color: TOKEN.muted, fontSize: 11, marginBottom: 6 }}>Date</div>
           <input
             type="date"
@@ -1472,7 +1493,7 @@ export default function KharchaApp() {
         {/* Wallet Selector */}
         <div style={{ padding: "8px 0" }}>
           <div style={{ color: TOKEN.muted, fontSize: 10, marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.1em" }}>Select Account</div>
-          <div style={{ ...S.walletGrid, gridTemplateColumns: settings.layoutMode === "desktop" ? "repeat(auto-fill, minmax(140px, 1fr))" : "repeat(2, minmax(0, 1fr))" }}>
+          <div style={{ ...S.walletGrid, gridTemplateColumns: isDesktop ? "repeat(auto-fill, minmax(140px, 1fr))" : "repeat(2, minmax(0, 1fr))" }}>
             {WALLETS.map(w => (
               <button
                 key={w.id}
@@ -1529,11 +1550,11 @@ export default function KharchaApp() {
         {showKeypad ? (
           <div style={{ ...S.keypadGrid, gap: 10, maxWidth: "100%" } as any}>
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
-              <button key={n} onClick={() => handleNumInput(n.toString())} style={{ ...S.keyBtn, height: 50, borderRadius: 12 } as any}>{n}</button>
+              <button key={n} onClick={() => handleNumInput(n.toString())} className="key-btn" style={{ ...S.keyBtn, height: 50, borderRadius: 12 } as any}>{n}</button>
             ))}
-            <button onClick={() => { if (settings.haptic) triggerHaptic("medium"); setShowKeypad(false); }} style={{ ...S.keyBtn, height: 50, borderRadius: 12, color: TOKEN.amber } as any}>OK</button>
-            <button onClick={() => handleNumInput("0")} style={{ ...S.keyBtn, height: 50, borderRadius: 12 } as any}>0</button>
-            <button onClick={handleBackspace} style={{ ...S.keyBtn, height: 50, borderRadius: 12, color: TOKEN.danger } as any}>⌫</button>
+            <button onClick={() => { if (settings.haptic) triggerHaptic("medium"); setShowKeypad(false); }} className="key-btn" style={{ ...S.keyBtn, height: 50, borderRadius: 12, color: TOKEN.amber } as any}>OK</button>
+            <button onClick={() => handleNumInput("0")} className="key-btn" style={{ ...S.keyBtn, height: 50, borderRadius: 12 } as any}>0</button>
+            <button onClick={handleBackspace} className="key-btn" style={{ ...S.keyBtn, height: 50, borderRadius: 12, color: TOKEN.danger } as any}>⌫</button>
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
@@ -1577,74 +1598,41 @@ export default function KharchaApp() {
   function renderDash() {
     const periodLabel = period === "today" ? "today" : period === "week" ? "this week" : "this month";
     const subText = `${periodExpenses.length} expense${periodExpenses.length !== 1 ? "s" : ""} ${periodLabel}`;
+    const income = filterByPeriod(expenses, period).filter(e => e.type === "income");
+    const incomeTotal = income.reduce((s, e) => s + e.amount, 0);
 
     return (
-      <div style={S.screenPad}>
-        <div style={{ ...S.row, marginBottom: 12 }}>
+      <div style={S.screenPad} className="screen-enter">
+        {/* Header */}
+        <div style={{ ...S.row, marginBottom: 4 }}>
           <div>
-            <div style={{ color: TOKEN.muted, fontSize: 12 }}>{greeting()}</div>
-            <div style={{ color: TOKEN.text, fontSize: 20, fontWeight: 700 }}>{settings.userName || "Buddy"}</div>
+            <div style={{ color: TOKEN.muted, fontSize: 12, letterSpacing: "0.04em" }}>{greeting()} 👋</div>
+            <div style={{ color: TOKEN.text, fontSize: 22, fontWeight: 700, letterSpacing: "-0.3px" }}>{settings.userName || "Buddy"}</div>
           </div>
-          <div style={S.avatar} onClick={() => go("set")}>
+          <div style={{ ...S.avatar, width: 44, height: 44, boxShadow: `0 0 0 2px ${TOKEN.amber}40` }} onClick={() => go("set")}>
             {settings.profileImage ? (
               <img src={settings.profileImage} style={S.avatarImg} alt="Profile" />
             ) : (
-              <span style={{ fontSize: 18 }}>👤</span>
+              <span style={{ fontSize: 20 }}>👤</span>
             )}
           </div>
         </div>
 
-        {/* Budget Alert Banner */}
-        {!budgetAlertDismissed && todayTotal > settings.dailyBudget && (
-          <div style={{
-            padding: "12px 16px",
-            background: `${TOKEN.danger}15`,
-            borderRadius: 16,
-            border: `1px solid ${TOKEN.danger}40`,
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            marginBottom: 4,
-          }}>
-            <span style={{ fontSize: 22 }}>⚠️</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ color: TOKEN.danger, fontSize: 13, fontWeight: 600 }}>Daily budget exceeded!</div>
-              <div style={{ color: TOKEN.muted, fontSize: 11 }}>
-                Spent {fmt(todayTotal, settings.currency || "₹")} of {fmt(settings.dailyBudget, settings.currency || "₹")} today
-              </div>
-            </div>
-            <button onClick={() => setBudgetAlertDismissed(true)} style={{ background: "none", border: "none", color: TOKEN.muted, cursor: "pointer", fontSize: 18, lineHeight: 1 }}>✕</button>
-          </div>
-        )}
-
-        {/* Budget Goals quick link */}
-        {budgetGoals.length > 0 && (
-          <button
-            onClick={() => go("budget_goals")}
-            style={{ ...S.card, flexDirection: "row", alignItems: "center", gap: 12, cursor: "pointer", border: `1px solid ${TOKEN.amber}30` }}
-          >
-            <span style={{ fontSize: 20 }}>🎯</span>
-            <div style={{ flex: 1, textAlign: "left" }}>
-              <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 600 }}>Budget Goals</div>
-              <div style={{ color: TOKEN.muted, fontSize: 11 }}>
-                {budgetGoals.filter(g => categoryTotal(expenses, g.categoryId) >= g.limit).length} category{budgetGoals.filter(g => categoryTotal(expenses, g.categoryId) >= g.limit).length !== 1 ? "ies" : "y"} at limit this month
-              </div>
-            </div>
-            <span style={{ color: TOKEN.amber }}>›</span>
-          </button>
-        )}
-
-        <div style={S.tabRow}>
+        {/* Period Tabs */}
+        <div style={{ ...S.tabRow, padding: 4, borderRadius: 14 }}>
           {(["today", "week", "month"] as PeriodName[]).map((p) => (
             <button
               key={p}
               onClick={() => setPeriod(p)}
+              className="period-btn"
               style={{
-                flex: 1, padding: 7, borderRadius: 8, border: "none", cursor: "pointer",
+                flex: 1, padding: "8px 4px", borderRadius: 10, border: "none", cursor: "pointer",
                 background: period === p ? TOKEN.amber : "transparent",
                 color: period === p ? TOKEN.amberText : TOKEN.muted,
-                fontWeight: period === p ? 500 : 400,
+                fontWeight: period === p ? 700 : 400,
                 fontSize: 12,
+                transition: "all 0.2s",
+                letterSpacing: "0.02em",
               }}
             >
               {p.charAt(0).toUpperCase() + p.slice(1)}
@@ -1652,23 +1640,113 @@ export default function KharchaApp() {
           ))}
         </div>
 
-        <OverviewCard total={periodTotal} sub={subText} />
+        {/* Hero Balance Card */}
+        <div style={S.heroCard as any}>
+          {/* Decorative glow orb */}
+          <div style={{
+            position: "absolute", top: -30, right: -20,
+            width: 120, height: 120, borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(239,159,39,0.2) 0%, transparent 70%)",
+            pointerEvents: "none",
+          }} />
+          <div style={{ color: TOKEN.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em" }}>Total {periodLabel}</div>
+          <div style={{
+            fontSize: 44, fontWeight: 800, color: TOKEN.text,
+            fontFamily: TOKEN.mono, letterSpacing: "-2px", lineHeight: 1.1,
+          }}>
+            {fmt(periodTotal, settings.currency || "₹")}
+          </div>
+          <div style={{ fontSize: 12, color: TOKEN.muted }}>{subText}</div>
+          {incomeTotal > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+              <div style={{
+                padding: "3px 10px", borderRadius: 20,
+                background: "rgba(29,158,117,0.14)",
+                border: "1px solid rgba(29,158,117,0.25)",
+                color: TOKEN.success, fontSize: 11, fontWeight: 600,
+              }}>
+                +{fmt(incomeTotal, settings.currency || "₹")} income
+              </div>
+            </div>
+          )}
+          {/* Week sparkline */}
+          <div style={{ marginTop: 8 }}>
+            <BarChart data={barData} currency={settings.currency || "₹"} />
+          </div>
+        </div>
+
+        {/* Budget Alert Banner */}
+        {!budgetAlertDismissed && todayTotal > settings.dailyBudget && (
+          <div style={{
+            padding: "12px 16px",
+            background: `rgba(226,75,74,0.08)`,
+            borderRadius: 16,
+            border: `1px solid rgba(226,75,74,0.25)`,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+          }}>
+            <span style={{ fontSize: 20 }}>⚠️</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ color: TOKEN.danger, fontSize: 13, fontWeight: 600 }}>Daily budget exceeded!</div>
+              <div style={{ color: TOKEN.muted, fontSize: 11 }}>
+                Spent {fmt(todayTotal, settings.currency || "₹")} of {fmt(settings.dailyBudget, settings.currency || "₹")} today
+              </div>
+            </div>
+            <button onClick={() => setBudgetAlertDismissed(true)} style={{ background: "none", border: "none", color: TOKEN.muted, cursor: "pointer", fontSize: 16, lineHeight: 1 }}>✕</button>
+          </div>
+        )}
+
+        {/* Budget Goals quick link */}
+        {budgetGoals.length > 0 && (
+          <button
+            onClick={() => go("budget_goals")}
+            style={{
+              ...S.card, flexDirection: "row", alignItems: "center", gap: 12, cursor: "pointer",
+              border: `1px solid rgba(239,159,39,0.2)`,
+              background: "rgba(239,159,39,0.04)",
+            } as any}
+          >
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: "rgba(239,159,39,0.12)",
+              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
+            }}>🎯</div>
+            <div style={{ flex: 1, textAlign: "left" }}>
+              <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 600 }}>Budget Goals</div>
+              <div style={{ color: TOKEN.muted, fontSize: 11 }}>
+                {budgetGoals.filter(g => categoryTotal(expenses, g.categoryId) >= g.limit).length} categor{budgetGoals.filter(g => categoryTotal(expenses, g.categoryId) >= g.limit).length !== 1 ? "ies" : "y"} at limit
+              </div>
+            </div>
+            <span style={{ color: TOKEN.amber, fontSize: 18 }}>›</span>
+          </button>
+        )}
 
         {/* Wallets Overview */}
-        <div style={{ marginTop: 10 }}>
-          <div style={{ ...S.row, marginBottom: 8 }}>
-            <div style={{ color: TOKEN.muted, fontSize: 12 }}>Accounts</div>
+        <div>
+          <div style={{ ...S.row, marginBottom: 10 }}>
+            <div style={{ color: TOKEN.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>Accounts</div>
+            <button onClick={() => go("manage_wallets")} style={{ background: "none", border: "none", color: TOKEN.amber, fontSize: 11, cursor: "pointer" }}>Manage</button>
           </div>
-          <div style={{ ...S.walletGrid, gridTemplateColumns: settings.layoutMode === "desktop" ? "repeat(auto-fill, minmax(140px, 1fr))" : "repeat(2, minmax(0, 1fr))" }}>
+          <div style={{ ...S.walletGrid, display: "grid", gridTemplateColumns: isDesktop ? "repeat(auto-fill, minmax(150px, 1fr))" : "repeat(2, minmax(0, 1fr))", gap: 10 }}>
             {wallets.map(w => {
               const balance = sumWalletBalance(expenses, w.id, w.initialBalance);
               return (
-                <div key={w.id} style={S.walletCard}>
-                  <div style={{ ...S.row }}>
-                    <span style={{ fontSize: 18 }}>{w.icon}</span>
-                    <div style={S.walletTag as any}>{w.label}</div>
+                <div key={w.id} style={{
+                  ...S.walletCard,
+                  background: `linear-gradient(135deg, ${TOKEN.surface} 0%, ${TOKEN.surfaceElevated} 100%)`,
+                  borderRadius: 16,
+                  padding: 14,
+                  transition: "transform 0.2s, box-shadow 0.2s",
+                }} className="wallet-card">
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <span style={{ fontSize: 22 }}>{w.icon}</span>
+                    <div style={{ ...S.walletTag as any, background: TOKEN.surfaceHighlight }}>{w.label}</div>
                   </div>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: TOKEN.text, fontFamily: TOKEN.mono }}>
+                  <div style={{
+                    fontSize: 18, fontWeight: 700, color: balance < 0 ? TOKEN.danger : TOKEN.text,
+                    fontFamily: TOKEN.mono, letterSpacing: "-0.5px", marginTop: 4,
+                  }}>
                     {balance < 0 ? "-" : ""}{fmt(Math.abs(balance))}
                   </div>
                 </div>
@@ -1681,14 +1759,12 @@ export default function KharchaApp() {
         {settings.biometric && !localStorage.getItem(`bio_cred_${settings.userEmail || "default"}`) && (
           <div style={{
             padding: 16,
-            background: "${TOKEN.surfaceElevated}",
+            background: "rgba(239,159,39,0.06)",
             borderRadius: 16,
-            border: `1px solid ${TOKEN.amber}40`,
+            border: `1px solid rgba(239,159,39,0.2)`,
             display: "flex",
             alignItems: "center",
             gap: 12,
-            marginTop: 10,
-            animation: "pulseSuccess 2s infinite"
           }}>
             <div style={{ fontSize: 24 }}>☝️</div>
             <div style={{ flex: 1 }}>
@@ -1696,55 +1772,86 @@ export default function KharchaApp() {
               <div style={{ color: TOKEN.muted, fontSize: 11 }}>Secure your app with one tap</div>
             </div>
             <button onClick={registerBiometrics} style={{
-              padding: "6px 12px",
+              padding: "6px 14px",
               background: TOKEN.amber,
               color: TOKEN.amberText,
               border: "none",
-              borderRadius: 8,
+              borderRadius: 10,
               fontSize: 12,
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: "pointer"
             }}>SET UP</button>
           </div>
         )}
 
-        <div style={{ ...S.card, gap: 12 }}>
-          <div style={{ color: TOKEN.muted, fontSize: 12 }}>By category</div>
-          {topCats.map((c) => (
-            <CategoryBar key={c.id} category={c} total={c.total} max={maxCatTotal} />
-          ))}
-        </div>
+        {/* Category Breakdown */}
+        {topCats.length > 0 && (
+          <div style={{ ...S.card, gap: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 600 }}>By Category</div>
+              <div style={{ fontSize: 11, color: TOKEN.muted }}>Top {topCats.length}</div>
+            </div>
+            {topCats.map((c) => (
+              <CategoryBar key={c.id} category={c} total={c.total} max={maxCatTotal} currency={settings.currency || "₹"} />
+            ))}
+          </div>
+        )}
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 4 }}>
-          <div style={{ color: TOKEN.muted, fontSize: 12 }}>Recent</div>
-          <button onClick={() => go("hist")} style={{ background: "none", border: "none", color: TOKEN.amber, fontSize: 12 }}>See all</button>
+        {/* Recent Transactions */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 600 }}>Recent</div>
+          <button onClick={() => go("hist")} style={{
+            background: "rgba(239,159,39,0.1)", border: "none",
+            color: TOKEN.amber, fontSize: 11, fontWeight: 600,
+            padding: "4px 10px", borderRadius: 20, cursor: "pointer",
+          }}>See all →</button>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {expenses.slice(0, 3).map((e) => (
             <ExpenseRow key={e.id} expense={e} categories={categories} onDelete={deleteExpense} onEdit={handleEditOpen} currency={settings.currency || "₹"} />
           ))}
+          {expenses.length === 0 && (
+            <div style={{
+              textAlign: "center", padding: "32px 0",
+              color: TOKEN.muted, fontSize: 13,
+              border: `1px dashed ${TOKEN.border}`,
+              borderRadius: 16,
+            }}>
+              No expenses yet — tap Add to start tracking 🎯
+            </div>
+          )}
         </div>
 
-        <div style={{ display: "flex", justifyContent: "center", padding: "10px 0" }}>
-          <button onClick={() => go("cat")} style={S.fab}>
+        {/* FAB */}
+        <div style={{ display: "flex", justifyContent: "center", padding: "8px 0 4px" }}>
+          <button onClick={() => go("cat")} style={S.fab} className="fab-btn">
             <PlusIcon color={TOKEN.amberText} />
-            <span style={{ color: TOKEN.amberText, fontSize: 14, fontWeight: 500 }}>Add expense</span>
+            <span style={{ color: TOKEN.amberText, fontSize: 14, fontWeight: 700, letterSpacing: "0.02em" }}>Add Expense</span>
           </button>
         </div>
 
-        {/* Monthly breakdown quick link */}
-        <button
-          onClick={() => go("monthly_breakdown")}
-          style={{ ...S.card, flexDirection: "row", alignItems: "center", gap: 12, cursor: "pointer", marginBottom: 4 }}
-        >
-          <span style={{ fontSize: 20 }}>📅</span>
-          <div style={{ flex: 1, textAlign: "left" }}>
-            <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 600 }}>Monthly Breakdown</div>
-            <div style={{ color: TOKEN.muted, fontSize: 11 }}>Day-by-day spending for this month</div>
-          </div>
-          <span style={{ color: TOKEN.amber }}>›</span>
-        </button>
+        {/* Quick links */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingBottom: 8 }}>
+          <button
+            onClick={() => go("monthly_breakdown")}
+            style={{
+              ...S.card, flexDirection: "row", alignItems: "center",
+              gap: 12, cursor: "pointer",
+            } as any}
+          >
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: "rgba(99,102,241,0.12)",
+              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
+            }}>📅</div>
+            <div style={{ flex: 1, textAlign: "left" }}>
+              <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 600 }}>Monthly Breakdown</div>
+              <div style={{ color: TOKEN.muted, fontSize: 11 }}>Day-by-day spending</div>
+            </div>
+            <span style={{ color: TOKEN.amber, fontSize: 18 }}>›</span>
+          </button>
+        </div>
       </div>
     );
   }
@@ -1752,7 +1859,7 @@ export default function KharchaApp() {
   // ────────────────────────────────────────────────────────────────────────────
   function renderHist() {
     return (
-      <div style={S.screenPad}>
+      <div style={S.screenPad} className="screen-enter">
         {/* Header */}
         <div style={S.row}>
           <button onClick={() => go("dash")} style={S.iconBtn} aria-label="Back">←</button>
@@ -1776,7 +1883,7 @@ export default function KharchaApp() {
         </div>
 
         {/* Search */}
-        <div style={{ ...S.card, flexDirection: "row", gap: 8, alignItems: "center" }}>
+        <div style={{ ...S.card, flexDirection: "row", gap: 8, alignItems: "center" }} className="card">
           <span style={{ color: TOKEN.muted, fontSize: 14 }}>🔍</span>
           <input
             type="text"
@@ -1800,7 +1907,7 @@ export default function KharchaApp() {
                   whiteSpace: "nowrap", padding: "5px 12px", borderRadius: 20,
                   fontSize: 11, cursor: "pointer",
                   border: `0.5px solid ${active ? TOKEN.amber : TOKEN.borderSub}`,
-                  background: active ? "${TOKEN.surfaceElevated}" : "transparent",
+                  background: active ? TOKEN.surfaceElevated : "transparent",
                   color: active ? TOKEN.amber : "#666",
                 }}
               >
@@ -1821,7 +1928,7 @@ export default function KharchaApp() {
               <div style={{ ...S.label, marginBottom: 6 }}>
                 {dateLabel(date)} • {fmt(sumExpenses(groupedHistory[date]), settings.currency || "₹")}
               </div>
-              <div style={settings.layoutMode === "desktop" ? { display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" } : { display: "flex", flexDirection: "column", gap: 7 }}>
+              <div style={isDesktop ? { display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" } : { display: "flex", flexDirection: "column", gap: 7 }}>
                 {groupedHistory[date].map((e) => (
                   <ExpenseRow key={e.id} expense={e} categories={categories} onDelete={deleteExpense} onEdit={handleEditOpen} currency={settings.currency || "₹"} />
                 ))}
@@ -1838,7 +1945,7 @@ export default function KharchaApp() {
     const allTimeTotal = sumExpenses(expenses);
 
     return (
-      <div style={S.screenBase}>
+      <div style={S.screenBase} className="screen-enter">
         {/* Header */}
         <div style={{ ...S.row, padding: "20px 20px 12px", borderBottom: `0.5px solid ${TOKEN.border}` }}>
           <button onClick={() => go("dash")} style={S.iconBtn} aria-label="Back">←</button>
@@ -1909,7 +2016,7 @@ export default function KharchaApp() {
           }
           updateSetting("pin", v);
         }} />
-        <button onClick={() => go("change_pin")} style={S.menuItem}>
+        <button onClick={() => go("change_pin")} style={S.menuItem} className="settings-item">
           <div style={{ flex: 1, textAlign: "left" }}>
             <div style={{ color: TOKEN.textSub, fontSize: 13 }}>Change PIN</div>
             <div style={{ color: TOKEN.muted, fontSize: 11 }}>Update your 4-digit security code</div>
@@ -1927,7 +2034,7 @@ export default function KharchaApp() {
         <TogRow 
           label="Desktop Layout" 
           sub="Use full screen width on large displays" 
-          val={settings.layoutMode === "desktop"} 
+          val={isDesktop} 
           onChange={(v) => updateSetting("layoutMode", v ? "desktop" : "mobile")} 
         />
 
@@ -1994,35 +2101,35 @@ export default function KharchaApp() {
         </div>
 
         <SectionLabel>Preferences</SectionLabel>
-        <button onClick={() => go("budget_goals")} style={S.menuItem}>
+        <button onClick={() => go("budget_goals")} style={S.menuItem} className="settings-item">
           <div style={{ flex: 1, textAlign: "left" }}>
             <div style={{ color: TOKEN.textSub, fontSize: 13 }}>Budget Goals</div>
             <div style={{ color: TOKEN.muted, fontSize: 11 }}>Set monthly spend caps per category</div>
           </div>
           <span style={{ color: TOKEN.muted }}>›</span>
         </button>
-        <button onClick={() => go("manage_cats")} style={S.menuItem}>
+        <button onClick={() => go("manage_cats")} style={S.menuItem} className="settings-item">
           <div style={{ flex: 1, textAlign: "left" }}>
             <div style={{ color: TOKEN.textSub, fontSize: 13 }}>Manage Categories</div>
             <div style={{ color: TOKEN.muted, fontSize: 11 }}>Add, edit or remove expense types</div>
           </div>
           <span style={{ color: TOKEN.muted }}>›</span>
         </button>
-        <button onClick={() => go("manage_wallets")} style={S.menuItem}>
+        <button onClick={() => go("manage_wallets")} style={S.menuItem} className="settings-item">
           <div style={{ flex: 1, textAlign: "left" }}>
             <div style={{ color: TOKEN.textSub, fontSize: 13 }}>Manage Accounts</div>
             <div style={{ color: TOKEN.muted, fontSize: 11 }}>Adjust starting balances and labels</div>
           </div>
           <span style={{ color: TOKEN.muted }}>›</span>
         </button>
-        <button onClick={() => go("user_manage")} style={S.menuItem}>
+        <button onClick={() => go("user_manage")} style={S.menuItem} className="settings-item">
           <div style={{ flex: 1, textAlign: "left" }}>
             <div style={{ color: TOKEN.textSub, fontSize: 13 }}>Manage Users</div>
             <div style={{ color: TOKEN.muted, fontSize: 11 }}>Add, rename or delete user profiles</div>
           </div>
           <span style={{ color: TOKEN.muted }}>›</span>
         </button>
-        <button onClick={() => go("user_select")} style={S.menuItem}>
+        <button onClick={() => go("user_select")} style={S.menuItem} className="settings-item">
           <div style={{ flex: 1, textAlign: "left" }}>
             <div style={{ color: TOKEN.amber, fontSize: 13, fontWeight: 600 }}>Switch User</div>
             <div style={{ color: TOKEN.muted, fontSize: 11 }}>Currently: {settings.userName || "User"}</div>
@@ -2078,6 +2185,7 @@ export default function KharchaApp() {
         <div style={{ padding: "0 20px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
           <button
             onClick={() => go("subscriptions")}
+            className="settings-item card"
             style={{ ...S.card, flexDirection: "row", justifyContent: "space-between", alignItems: "center", cursor: "pointer", border: `1px solid ${TOKEN.amber}` }}
           >
             <div style={{ color: TOKEN.text, fontSize: 13, fontWeight: 500 }}>Manage Subscriptions</div>
@@ -2094,6 +2202,7 @@ export default function KharchaApp() {
           />
           <button
             onClick={() => csvInputRef.current?.click()}
+            className="settings-item card"
             style={{ ...S.card, flexDirection: "row", justifyContent: "space-between", alignItems: "center", cursor: "pointer" }}
           >
             <div>
@@ -2122,7 +2231,7 @@ export default function KharchaApp() {
 
   function renderChangePin() {
     return (
-      <div style={S.screenBase}>
+      <div style={S.screenBase} className="screen-enter">
         <div style={{ ...S.row, padding: "20px 20px 12px", borderBottom: `0.5px solid ${TOKEN.border}` }}>
           <button onClick={() => go("set")} style={S.iconBtn} aria-label="Back">←</button>
           <div style={S.heading}>Change PIN</div>
@@ -2139,10 +2248,10 @@ export default function KharchaApp() {
           </div>
           <div style={S.keypadGrid as any}>
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
-              <button key={n} onClick={() => handlePinInput(n.toString())} style={S.keyBtn as any}>{n}</button>
+              <button key={n} onClick={() => handlePinInput(n.toString())} className="key-btn" style={S.keyBtn as any}>{n}</button>
             ))}
-            <button onClick={clearPin} style={{ ...S.keyBtn, color: TOKEN.danger } as any}>✕</button>
-            <button onClick={() => handlePinInput("0")} style={S.keyBtn as any}>0</button>
+            <button onClick={clearPin} className="key-btn" style={{ ...S.keyBtn, color: TOKEN.danger } as any}>✕</button>
+            <button onClick={() => handlePinInput("0")} className="key-btn" style={S.keyBtn as any}>0</button>
             <button onClick={() => {
               if (pinInput.length === 4) {
                 updateSetting("pinCode", pinInput);
@@ -2162,7 +2271,7 @@ export default function KharchaApp() {
 
   function renderRegistry() {
     return (
-      <div style={S.screenBase}>
+      <div style={S.screenBase} className="screen-enter">
         <div style={{ ...S.row, padding: "20px 20px 12px" }}>
           <button onClick={() => go("set")} style={S.iconBtn} aria-label="Back">←</button>
           <div style={S.heading}>Security Registry</div>
@@ -2202,7 +2311,7 @@ export default function KharchaApp() {
   function renderSubscriptions() {
     const subs = expenses.filter(e => e.isRecurring);
     return (
-      <div style={S.screenPad}>
+      <div style={S.screenPad} className="screen-enter">
         <div style={S.row}>
           <button onClick={() => go("set")} style={S.iconBtn} aria-label="Back"><ArrowLeftIcon color={TOKEN.dim} /></button>
           <div style={S.heading}>Subscriptions</div>
@@ -2235,7 +2344,7 @@ export default function KharchaApp() {
   function renderBudgetGoals() {
     const cur = settings.currency || "₹";
     return (
-      <div style={S.screenBase}>
+      <div style={S.screenBase} className="screen-enter">
         <div style={{ ...S.row, padding: "20px 20px 12px", borderBottom: `0.5px solid ${TOKEN.border}` }}>
           <button onClick={() => go("set")} style={S.iconBtn} aria-label="Back"><ArrowLeftIcon color={TOKEN.dim} /></button>
           <div style={S.heading}>Budget Goals</div>
@@ -2252,7 +2361,7 @@ export default function KharchaApp() {
             const spent = categoryTotal(expenses, cat.id);
 
             return (
-              <div key={cat.id} style={{ ...S.card, gap: 16 }}>
+              <div key={cat.id} style={{ ...S.card, gap: 16 }} className="card">
                 {goal ? (
                   <BudgetGoalBar category={cat} spent={spent} limit={goal.limit} currency={cur} />
                 ) : (
@@ -2328,7 +2437,7 @@ export default function KharchaApp() {
     const peakDay = dayData.reduce((best, d) => d.total > best.total ? d : best, { day: 0, total: 0 });
 
     return (
-      <div style={S.screenBase}>
+      <div style={S.screenBase} className="screen-enter">
         <div style={{ ...S.row, padding: "20px 20px 12px", borderBottom: `0.5px solid ${TOKEN.border}` }}>
           <button onClick={() => go("dash")} style={S.iconBtn} aria-label="Back"><ArrowLeftIcon color={TOKEN.dim} /></button>
           <div style={S.heading}>{monthName}</div>
@@ -2345,7 +2454,7 @@ export default function KharchaApp() {
               { label: "Avg / day", value: fmt(avgPerDay, cur), color: TOKEN.text },
               { label: "Safe daily", value: dailyRemaining > 0 ? fmt(dailyRemaining, cur) : "—", color: TOKEN.text },
             ].map(s => (
-              <div key={s.label} style={{ ...S.card, padding: 14 }}>
+              <div key={s.label} style={{ ...S.card, padding: 14 }} className="card">
                 <div style={{ color: TOKEN.muted, fontSize: 10, marginBottom: 4 }}>{s.label}</div>
                 <div style={{ color: s.color, fontSize: 16, fontWeight: 700, fontFamily: TOKEN.mono }}>{s.value}</div>
               </div>
@@ -2353,7 +2462,7 @@ export default function KharchaApp() {
           </div>
 
           {/* Sparkline */}
-          <div style={{ ...S.card, gap: 12 }}>
+          <div style={{ ...S.card, gap: 12 }} className="card">
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: TOKEN.textSub }}>Daily Spending</div>
               {peakDay.total > 0 && (
@@ -2369,7 +2478,7 @@ export default function KharchaApp() {
           </div>
 
           {/* Budget progress */}
-          <div style={{ ...S.card, gap: 10 }}>
+          <div style={{ ...S.card, gap: 10 }} className="card">
             <div style={{ fontSize: 13, fontWeight: 600, color: TOKEN.textSub }}>Monthly Budget</div>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: TOKEN.muted }}>
               <span>{fmt(totalThisMonth, cur)} spent</span>
@@ -2390,7 +2499,7 @@ export default function KharchaApp() {
           </div>
 
           {/* Day-by-day list (non-zero days only) */}
-          <div style={{ ...S.card, gap: 8 }}>
+          <div style={{ ...S.card, gap: 8 }} className="card">
             <div style={{ fontSize: 13, fontWeight: 600, color: TOKEN.textSub, marginBottom: 4 }}>Day-by-Day</div>
             {dayData.filter(d => d.total > 0).length === 0 ? (
               <div style={{ color: TOKEN.muted, fontSize: 13, textAlign: "center", padding: "16px 0" }}>No expenses this month yet.</div>
@@ -2424,7 +2533,7 @@ export default function KharchaApp() {
         expenses={expenses} 
         categories={categories} 
         settings={settings}
-        isDesktop={settings.layoutMode === "desktop"}
+        isDesktop={isDesktop}
         onBack={() => go("dash")} 
       />
     );
@@ -2432,7 +2541,7 @@ export default function KharchaApp() {
 
   function renderManageWallets() {
     return (
-      <div style={S.screenPad}>
+      <div style={S.screenPad} className="screen-enter">
         <div style={S.row}>
           <button onClick={() => go("set")} style={S.iconBtn} aria-label="Back"><ArrowLeftIcon color={TOKEN.dim} /></button>
           <div style={S.heading}>Accounts</div>
@@ -2441,7 +2550,7 @@ export default function KharchaApp() {
         
         <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 24 }}>
           {wallets.map((w, idx) => (
-            <div key={w.id} style={S.reportCard}>
+            <div key={w.id} style={S.reportCard} className="card">
               <div style={{ ...S.row, marginBottom: 12 }}>
                 <span style={{ fontSize: 24 }}>{w.icon}</span>
                 <div style={{ flex: 1, fontWeight: 600, color: TOKEN.text }}>{w.label}</div>
@@ -2540,7 +2649,7 @@ export default function KharchaApp() {
     const colors = ["#EF9F27", "#378ADD", "#1D9E75", "#7F77DD", "#D85A30", "#639922", "#E24B4A", "#F06292"];
 
     return (
-      <div style={S.screenPad}>
+      <div style={S.screenPad} className="screen-enter">
         <div style={S.row}>
           <button onClick={() => go("set")} style={S.iconBtn} aria-label="Back"><ArrowLeftIcon color={TOKEN.dim} /></button>
           <div style={S.heading}>Categories</div>
@@ -2641,7 +2750,7 @@ export default function KharchaApp() {
                 {/* Label Input */}
                 <div>
                   <div style={{ color: TOKEN.muted, fontSize: 11, marginBottom: 4 }}>Label</div>
-                  <div style={S.card}>
+                  <div style={S.card} className="card">
                     <input
                       type="text"
                       value={catLabel}
@@ -2655,7 +2764,7 @@ export default function KharchaApp() {
                 {/* Default Amount Input */}
                 <div>
                   <div style={{ color: TOKEN.muted, fontSize: 11, marginBottom: 4 }}>Default Amount (Optional)</div>
-                  <div style={S.card}>
+                  <div style={S.card} className="card">
                     <input
                       type="number"
                       value={catDefaultAmount}
@@ -2669,7 +2778,7 @@ export default function KharchaApp() {
                 {/* Icon Selection */}
                 <div>
                   <div style={{ color: TOKEN.muted, fontSize: 11, marginBottom: 4 }}>Icon (Emoji or Text)</div>
-                  <div style={{ ...S.card, flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <div style={{ ...S.card, flexDirection: "row", alignItems: "center", gap: 8 }} className="card">
                     <input
                       type="text"
                       value={catIcon}
@@ -2749,42 +2858,90 @@ export default function KharchaApp() {
 
     return (
       <div style={S.sidebar}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, paddingBottom: 24, borderBottom: `1px solid ${TOKEN.borderSub}` }}>
-          <div style={{ width: 40, height: 40, borderRadius: "50%", background: TOKEN.amber, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
-            {settings.profileImage ? <img src={settings.profileImage} style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} alt="Profile" /> : "🪙"}
+        {/* Brand Logo Section */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 12,
+          paddingBottom: 24,
+          borderBottom: `1px solid rgba(255,255,255,0.05)`,
+          marginBottom: 8,
+        }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 14,
+            background: `linear-gradient(135deg, rgba(239,159,39,0.3), rgba(239,159,39,0.1))`,
+            border: `1px solid rgba(239,159,39,0.25)`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 22, boxShadow: "0 4px 12px rgba(239,159,39,0.15)",
+          }}>
+            {settings.profileImage
+              ? <img src={settings.profileImage} style={{ width: "100%", height: "100%", borderRadius: 12, objectFit: "cover" }} alt="Profile" />
+              : "🪙"}
           </div>
           <div>
-            <div style={{ fontWeight: 700, color: TOKEN.text, fontSize: 16 }}>Kharcha</div>
-            <div style={{ fontSize: 11, color: TOKEN.muted }}>{settings.userName || "User"}</div>
+            <div style={{ fontWeight: 800, color: TOKEN.text, fontSize: 17, letterSpacing: "-0.3px" }}>Kharcha</div>
+            <div style={{ fontSize: 11, color: TOKEN.muted, marginTop: 1 }}>{settings.userName || "User"}</div>
           </div>
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, flex: 1 }}>
-          {tabs.map((t) => (
-            <button
-              key={t.screen}
-              onClick={() => {
-                if (settings.haptic) triggerHaptic("light");
-                go(t.screen);
-              }}
-              style={{
-                display: "flex", alignItems: "center", gap: 16, padding: "12px 16px", borderRadius: 12, border: "none", cursor: "pointer",
-                background: screen === t.screen ? "rgba(239, 159, 39, 0.1)" : "transparent",
-                color: screen === t.screen ? TOKEN.amber : TOKEN.textSub,
-                fontWeight: 600, fontSize: 14, transition: "all 0.2s"
-              }}
-            >
-              <span style={{ fontSize: 20 }}>{t.icon}</span>
-              {t.label}
-            </button>
-          ))}
+        {/* Nav Items */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
+          {tabs.map((t) => {
+            const isActive = screen === t.screen;
+            return (
+              <button
+                key={t.screen}
+                onClick={() => {
+                  if (settings.haptic) triggerHaptic("light");
+                  go(t.screen);
+                }}
+                className="sidebar-item"
+                style={{
+                  display: "flex", alignItems: "center", gap: 14,
+                  padding: "11px 14px",
+                  borderRadius: 14, border: "none", cursor: "pointer",
+                  background: isActive ? "rgba(239,159,39,0.1)" : "transparent",
+                  color: isActive ? TOKEN.amber : TOKEN.textSub,
+                  fontWeight: isActive ? 700 : 500,
+                  fontSize: 14,
+                  transition: "all 0.18s",
+                  position: "relative",
+                  borderLeft: isActive ? `3px solid ${TOKEN.amber}` : "3px solid transparent",
+                }}
+              >
+                <span style={{ fontSize: 18 }}>{t.icon}</span>
+                {t.label}
+                {isActive && (
+                  <div style={{
+                    position: "absolute", right: 12,
+                    width: 6, height: 6, borderRadius: "50%",
+                    background: TOKEN.amber,
+                    boxShadow: `0 0 8px ${TOKEN.amber}`,
+                  }} />
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        <div style={{ padding: 16, background: TOKEN.surfaceHighlight, borderRadius: 16 }}>
-          <div style={{ fontSize: 11, color: TOKEN.muted, marginBottom: 8 }}>Total Savings</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: TOKEN.success }}>
-            ₹{sumIncome(expenses) - sumExpenses(expenses)}
-          </div>
+        {/* Quick Add Button */}
+        <button
+          onClick={() => { if (settings.haptic) triggerHaptic("medium"); go("cat"); }}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            padding: "12px", borderRadius: 14, cursor: "pointer",
+            background: `linear-gradient(135deg, rgba(239,159,39,0.2), rgba(239,159,39,0.08))`,
+            border: `1px solid rgba(239,159,39,0.2)`,
+            color: TOKEN.amber, fontWeight: 700, fontSize: 13,
+            transition: "all 0.2s",
+          }}
+          className="sidebar-item"
+        >
+          <PlusIcon size={16} color={TOKEN.amber} />
+          Add Expense
+        </button>
+
+        {/* Footer */}
+        <div style={{ paddingTop: 16, borderTop: `1px solid rgba(255,255,255,0.05)`, marginTop: 8 }}>
+          <div style={{ color: TOKEN.dim, fontSize: 10, textAlign: "center", letterSpacing: "0.06em" }}>KHARCHA v2.0</div>
         </div>
       </div>
     );
@@ -2800,29 +2957,44 @@ export default function KharchaApp() {
 
     return (
       <div style={S.tabNav}>
-        {tabs.map((t) => (
-          <div
-            key={t.screen}
-            onClick={() => {
-              if (settings.haptic) triggerHaptic("light");
-              go(t.screen);
-            }}
-            style={{
-              ...S.tabItem,
-              background: screen === t.screen ? TOKEN.surfaceHighlight : "transparent",
-              color: screen === t.screen ? TOKEN.amber : TOKEN.dim,
-            }}
-          >
-            <span style={{ fontSize: 20 }}>{t.icon}</span>
-            <span style={{ fontSize: 10, fontWeight: 500 }}>{t.label}</span>
-          </div>
-        ))}
+        {tabs.map((t) => {
+          const isActive = screen === t.screen;
+          return (
+            <div
+              key={t.screen}
+              onClick={() => {
+                if (settings.haptic) triggerHaptic("light");
+                go(t.screen);
+              }}
+              className="nav-item"
+              style={{
+                ...S.tabItem,
+                background: isActive ? "rgba(239,159,39,0.12)" : "transparent",
+                color: isActive ? TOKEN.amber : TOKEN.dim,
+                transition: "all 0.2s",
+                borderRadius: 14,
+                position: "relative",
+              }}
+            >
+              <span style={{ fontSize: 20 }}>{t.icon}</span>
+              <span style={{ fontSize: 10, fontWeight: isActive ? 700 : 400 }}>{t.label}</span>
+              {isActive && (
+                <div style={{
+                  position: "absolute", bottom: 3,
+                  width: 4, height: 4, borderRadius: "50%",
+                  background: TOKEN.amber,
+                  boxShadow: `0 0 6px ${TOKEN.amber}`,
+                }} />
+              )}
+            </div>
+          );
+        })}
       </div>
     );
   }
 
   // ─── Root render ─────────────────────────────────────────────────────────────
-  const isDesktop = settings.layoutMode === "desktop";
+  // isDesktop is now managed by responsive state
 
   return (
     <div

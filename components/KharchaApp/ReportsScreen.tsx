@@ -94,7 +94,7 @@ export default function ReportsScreen({ expenses, categories, settings, isDeskto
 
   const renderOverview = () => (
     <>
-      <div style={{ ...S.reportCard, flexDirection: "row", alignItems: "center", justifyContent: "space-between", background: isLight ? "rgba(239, 159, 39, 0.05)" : "linear-gradient(135deg, rgba(239, 159, 39, 0.1) 0%, rgba(6, 6, 8, 0) 100%)" }}>
+      <div className="card" style={{ ...S.reportCard, flexDirection: "row", alignItems: "center", justifyContent: "space-between", background: isLight ? "rgba(239, 159, 39, 0.05)" : "linear-gradient(135deg, rgba(239, 159, 39, 0.1) 0%, rgba(6, 6, 8, 0) 100%)" }}>
         <div>
           <div style={{ fontSize: 16, fontWeight: 700, color: TOKEN.text }}>Financial Health</div>
           <div style={{ fontSize: 11, color: TOKEN.muted, marginTop: 4 }}>Based on your budget & savings</div>
@@ -105,17 +105,17 @@ export default function ReportsScreen({ expenses, categories, settings, isDeskto
       </div>
 
       <div style={isDesktop ? { display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))" } : { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-        <div style={S.reportCard}>
+        <div className="card" style={S.reportCard}>
           <div style={S.metricLabel}>Spent</div>
           <div style={S.metricValue}><AnimatedCounter value={totalSpent} prefix={currency} currency={currency} /></div>
         </div>
-        <div style={S.reportCard}>
+        <div className="card" style={S.reportCard}>
           <div style={S.metricLabel}>Today</div>
           <div style={{ ...S.metricValue, color: TOKEN.amber }}><AnimatedCounter value={daily?.total || 0} prefix={currency} currency={currency} /></div>
         </div>
       </div>
 
-      <div style={S.reportCard}>
+      <div className="card" style={S.reportCard}>
         <div style={S.row}>
           <div style={{ fontSize: 14, fontWeight: 600 }}>Spending Trend</div>
           <div style={{ display: "flex", background: TOKEN.surfaceHighlight, borderRadius: 8, padding: 2 }}>
@@ -162,7 +162,7 @@ export default function ReportsScreen({ expenses, categories, settings, isDeskto
     const blanks = Array.from({ length: (firstDay + 6) % 7 }, (_, i) => i);
 
     return (
-      <div style={S.reportCard}>
+      <div className="card" style={S.reportCard}>
         <div style={{ fontSize: 15, fontWeight: 700, textAlign: "center", marginBottom: 10 }}>
           {now.toLocaleString("default", { month: "long" })} {year}
         </div>
@@ -187,7 +187,7 @@ export default function ReportsScreen({ expenses, categories, settings, isDeskto
   };
 
   const renderPlaces = () => (
-    <div style={S.reportCard}>
+    <div className="card" style={S.reportCard}>
       <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 16 }}>Top Spending Places</div>
       {merchantData.map((m, i) => (
         <div key={i} style={S.merchantItem}>
@@ -211,7 +211,7 @@ export default function ReportsScreen({ expenses, categories, settings, isDeskto
     return (
       <div style={isDesktop ? { display: "grid", gap: 16, gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))" } : { display: "flex", flexDirection: "column", gap: 16 }}>
         {/* Financial Forecast */}
-        <div style={S.reportCard}>
+        <div className="card" style={S.reportCard}>
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>Month Forecast</div>
           <div style={{ fontSize: 10, color: TOKEN.muted, marginBottom: 12 }}>Predicted spending based on current habits</div>
           <div style={{ fontSize: 24, fontWeight: 700, color: TOKEN.amber, fontFamily: TOKEN.mono }}>{fmt(forecast.predicted, currency)}</div>
@@ -225,7 +225,7 @@ export default function ReportsScreen({ expenses, categories, settings, isDeskto
         </div>
 
         {/* Weekly Comparison */}
-        <div style={S.reportCard}>
+        <div className="card" style={S.reportCard}>
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Weekly Performance</div>
           <div style={{ display: "flex", gap: 12 }}>
             <div style={{ flex: 1 }}>
@@ -243,7 +243,7 @@ export default function ReportsScreen({ expenses, categories, settings, isDeskto
         </div>
 
         {/* Weekend Habits */}
-        <div style={S.reportCard}>
+        <div className="card" style={S.reportCard}>
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Spending Balance</div>
           <div style={{ display: "flex", height: 20, borderRadius: 10, overflow: "hidden", background: TOKEN.surfaceHighlight }}>
             <div style={{ width: `${(weekly.weekdayTotal / (weekly.thisTotal || 1)) * 100}%`, background: TOKEN.amber }} />
@@ -262,7 +262,7 @@ export default function ReportsScreen({ expenses, categories, settings, isDeskto
         </div>
 
         {/* Cash Flow */}
-        <div style={S.reportCard}>
+        <div className="card" style={S.reportCard}>
           <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Cash Flow Summary</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={S.row}>
@@ -284,7 +284,7 @@ export default function ReportsScreen({ expenses, categories, settings, isDeskto
         </div>
 
         {/* Deep Insights */}
-        <div style={S.reportCard}>
+        <div className="card" style={S.reportCard}>
           <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12 }}>Deep Insights</div>
           {insights.map((ins, i) => (
             <div key={i} style={S.insightItem}>
@@ -297,7 +297,7 @@ export default function ReportsScreen({ expenses, categories, settings, isDeskto
   };
 
   return (
-    <div style={S.screenBase}>
+    <div style={S.screenBase} className="screen-enter">
       <div style={{ ...S.row, padding: "20px 20px 10px", background: TOKEN.bg, position: "sticky", top: 0, zIndex: 10 }}>
         <button onClick={onBack} style={S.iconBtn}><ArrowLeftIcon color={TOKEN.dim} /></button>
         <div style={S.heading}>Intelligence</div>
@@ -312,6 +312,7 @@ export default function ReportsScreen({ expenses, categories, settings, isDeskto
           <button 
             key={t} 
             onClick={() => { if (settings.haptic) triggerHaptic("light"); setActiveTab(t as any); }}
+            className="period-btn"
             style={{ 
               flex: 1, padding: "8px 4px", borderRadius: 10, border: "none", fontSize: 11, fontWeight: 600,
               background: activeTab === t ? TOKEN.amber : TOKEN.surfaceHighlight,

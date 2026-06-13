@@ -1,9 +1,4 @@
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  20%, 60% { transform: translateX(-10px); }
-  40%, 80% { transform: translateX(10px); }
-}
-
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -11,32 +6,116 @@
   --foreground: #171717;
 }
 
-.key-btn:active {
-  background: #1A1A24 !important;
-  transform: scale(0.95);
-}
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: 'Outfit', var(--font-geist-sans), sans-serif;
   --font-mono: var(--font-geist-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #060608;
+    --foreground: #F0EEE5;
   }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Kharcha Responsive Utilities */
+/* ─── Keyframe Animations ─────────────────────────────────────────────────── */
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-10px); }
+  40%, 80% { transform: translateX(10px); }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes popIn {
+  0%   { transform: scale(0.92); opacity: 0; }
+  60%  { transform: scale(1.03); opacity: 1; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 12px rgba(239, 159, 39, 0.25); }
+  50%       { box-shadow: 0 0 28px rgba(239, 159, 39, 0.55); }
+}
+
+@keyframes barGrow {
+  from { transform: scaleY(0); transform-origin: bottom; }
+  to   { transform: scaleY(1); transform-origin: bottom; }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-8px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+/* ─── Interactive utilities ───────────────────────────────────────────────── */
+
+.key-btn:active {
+  background: #1A1A24 !important;
+  transform: scale(0.93) !important;
+}
+
+.cat-btn:hover {
+  transform: translateY(-2px);
+}
+
+.nav-item:hover {
+  background: rgba(239, 159, 39, 0.07) !important;
+}
+
+.sidebar-item:hover {
+  background: rgba(239, 159, 39, 0.06) !important;
+}
+
+.fab-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(239, 159, 39, 0.4) !important;
+}
+
+.icon-btn:hover {
+  background: rgba(255,255,255,0.06) !important;
+}
+
+/* ─── Screen entry animation ─────────────────────────────────────────────── */
+
+.screen-enter {
+  animation: slideUp 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* ─── Kharcha Responsive Utilities ──────────────────────────────────────── */
+
 .responsive-grid-auto {
   display: grid;
   gap: 12px;
@@ -54,3 +133,75 @@ body {
   gap: 12px;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 }
+
+/* ─── Glassmorphism ──────────────────────────────────────────────────────── */
+
+.glass {
+  background: rgba(22, 22, 31, 0.7) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+.glass-light {
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(239, 159, 39, 0.2);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(239, 159, 39, 0.4);
+}
+
+/* ─── Responsive phone overrides ─────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .app-root { padding: 0 !important; }
+  .app-phone {
+    width: 100vw !important;
+    height: 100vh !important;
+    min-height: 100vh !important;
+    max-width: 100vw !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+  .status-bar-sim,
+  .home-bar-sim { display: none !important; }
+}
+
+/* ─── Input & Card Focus Transitions ─────────────────────────────────────── */
+
+input {
+  transition: all 0.2s ease;
+}
+
+.card {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
+}
+
+.card:focus-within {
+  border-color: var(--token-amber) !important;
+  box-shadow: 0 0 12px var(--token-amberGlow) !important;
+}
+
+.settings-item {
+  transition: background 0.2s ease, transform 0.2s ease !important;
+}
+.settings-item:hover {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+.settings-item:active {
+  transform: scale(0.99);
+}
+

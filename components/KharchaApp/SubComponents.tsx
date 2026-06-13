@@ -11,90 +11,149 @@ import { fmt, dateLabel } from "./Utils";
 export function GlobalStyles() {
   return (
     <style dangerouslySetInnerHTML={{ __html: `
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+
       .theme-dark {
-        --token-bg: #060608;
-        --token-phone: #0C0C12;
+        --token-bg: #05050A;
+        --token-phone: #0C0C14;
         --token-text: #F0EEE5;
         --token-textSub: #D0CEC8;
-        --token-textFaint: #C8C6C0;
+        --token-textFaint: #C0BEB8;
         --token-muted: #44445A;
         --token-dim: #55556A;
-        --token-border: #28283A;
-        --token-borderSub: #1A1A24;
+        --token-border: #28283C;
+        --token-borderSub: #1A1A26;
         --token-amber: #EF9F27;
-        --token-amberText: #412402;
+        --token-amberGlow: rgba(239,159,39,0.18);
+        --token-amberText: #3A1E00;
         --token-danger: #E24B4A;
+        --token-dangerGlow: rgba(226,75,74,0.15);
         --token-success: #1D9E75;
-        --token-surface: #16161F;
-        --token-surfaceElevated: #1A1A24;
-        --token-surfaceHighlight: #252530;
+        --token-successGlow: rgba(29,158,117,0.15);
+        --token-surface: #14141E;
+        --token-surfaceElevated: #1A1A26;
+        --token-surfaceHighlight: #242432;
+        --token-glass: rgba(14,14,22,0.75);
       }
       .theme-light {
-        --token-bg: #F5F5F7;
+        --token-bg: #F0F0F5;
         --token-phone: #FFFFFF;
         --token-text: #1C1C1E;
         --token-textSub: #3A3A3C;
         --token-textFaint: #636366;
         --token-muted: #AEAEB2;
         --token-dim: #8E8E93;
-        --token-border: #E5E5EA;
-        --token-borderSub: #F2F2F7;
+        --token-border: #E0E0EA;
+        --token-borderSub: #F0F0F7;
         --token-amber: #EF9F27;
+        --token-amberGlow: rgba(239,159,39,0.12);
         --token-amberText: #FFFFFF;
         --token-danger: #FF3B30;
+        --token-dangerGlow: rgba(255,59,48,0.12);
         --token-success: #34C759;
+        --token-successGlow: rgba(52,199,89,0.12);
         --token-surface: #F2F2F7;
         --token-surfaceElevated: #FFFFFF;
         --token-surfaceHighlight: #E5E5EA;
+        --token-glass: rgba(255,255,255,0.75);
       }
-      
+
+      /* ── Base font ───────────────────────────────────────────── */
+      * { font-family: 'Outfit', system-ui, sans-serif !important; }
+
+      /* ── Keyframes ───────────────────────────────────────────── */
       @keyframes shake {
         0%, 100% { transform: translateX(0); }
-        20%, 60% { transform: translateX(-6px); }
-        40%, 80% { transform: translateX(6px); }
+        20%, 60%  { transform: translateX(-6px); }
+        40%, 80%  { transform: translateX(6px); }
       }
       @keyframes scan {
-        0% { transform: translateY(-40px); opacity: 0; }
-        50% { opacity: 1; }
-        100% { transform: translateY(40px); opacity: 0; }
+        0%   { transform: translateY(-40px); opacity: 0; }
+        50%  { opacity: 1; }
+        100% { transform: translateY(40px);  opacity: 0; }
       }
       @keyframes pulse {
-        0% { transform: scale(1); opacity: 0.5; }
+        0%   { transform: scale(1);   opacity: 0.5; }
         100% { transform: scale(1.5); opacity: 0; }
       }
       @keyframes pop {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.08); }
+        0%   { transform: scale(1); }
+        50%  { transform: scale(1.08); }
         100% { transform: scale(1); }
       }
       @keyframes pulseSuccess {
-        0% { box-shadow: 0 0 0 0 rgba(29, 158, 117, 0.4); }
-        70% { box-shadow: 0 0 0 20px rgba(29, 158, 117, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(29, 158, 117, 0); }
+        0%   { box-shadow: 0 0 0 0  rgba(29, 158, 117, 0.4); }
+        70%  { box-shadow: 0 0 0 20px rgba(29, 158, 117, 0); }
+        100% { box-shadow: 0 0 0 0  rgba(29, 158, 117, 0); }
       }
       @keyframes pulseError {
-        0% { box-shadow: 0 0 0 0 rgba(226, 75, 74, 0.4); }
-        70% { box-shadow: 0 0 0 20px rgba(226, 75, 74, 0); }
-        100% { box-shadow: 0 0 0 0 rgba(226, 75, 74, 0); }
+        0%   { box-shadow: 0 0 0 0  rgba(226, 75, 74, 0.4); }
+        70%  { box-shadow: 0 0 0 20px rgba(226, 75, 74, 0); }
+        100% { box-shadow: 0 0 0 0  rgba(226, 75, 74, 0); }
       }
-      
-      /* Responsive overrides for actual mobile devices */
+      @keyframes slideUp {
+        from { transform: translateY(18px); opacity: 0; }
+        to   { transform: translateY(0);    opacity: 1; }
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+      }
+      @keyframes popIn {
+        0%   { transform: scale(0.90); opacity: 0; }
+        65%  { transform: scale(1.04); opacity: 1; }
+        100% { transform: scale(1);    opacity: 1; }
+      }
+      @keyframes glowPulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(239,159,39,0.0); }
+        50%       { box-shadow: 0 0 22px 4px rgba(239,159,39,0.25); }
+      }
+      @keyframes barGrow {
+        from { transform: scaleY(0); }
+        to   { transform: scaleY(1); }
+      }
+      @keyframes shimmer {
+        0%   { background-position: -600px 0; }
+        100% { background-position:  600px 0; }
+      }
+      @keyframes fabPulse {
+        0%, 100% { box-shadow: 0 8px 24px rgba(239,159,39,0.20); }
+        50%       { box-shadow: 0 8px 36px rgba(239,159,39,0.45); }
+      }
+      @keyframes sidebarSlide {
+        from { opacity: 0; transform: translateX(-8px); }
+        to   { opacity: 1; transform: translateX(0); }
+      }
+
+      /* ── Screen enter ─────────────────────────────────────────── */
+      .screen-enter { animation: slideUp 0.28s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+
+      /* ── Interactive states ─────────────────────────────────── */
+      .cat-btn:hover  { transform: translateY(-2px) !important; }
+      .fab-btn:hover  { transform: translateY(-2px) !important; box-shadow: 0 12px 36px rgba(239,159,39,0.45) !important; }
+      .icon-btn:hover { background: rgba(255,255,255,0.07) !important; }
+      .nav-item:hover { background: rgba(239,159,39,0.07) !important; }
+      .sidebar-item:hover { background: rgba(239,159,39,0.07) !important; }
+      .period-btn:hover   { opacity: 0.85 !important; }
+
+      /* ── Wallet card hover ─────────────────────────────────── */
+      .wallet-card:hover { transform: translateY(-2px) !important; box-shadow: 0 8px 20px rgba(0,0,0,0.3) !important; }
+
+      /* ── Scrollbars ────────────────────────────────────────── */
+      ::-webkit-scrollbar { width: 4px; height: 4px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(239,159,39,0.2); border-radius: 2px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(239,159,39,0.4); }
+
+      /* ── Responsive overrides ──────────────────────────────── */
       @media (max-width: 600px) {
-        .app-root {
-          padding: 0 !important;
-        }
+        .app-root  { padding: 0 !important; }
         .app-phone {
-          width: 100vw !important;
-          height: 100vh !important;
-          min-height: 100vh !important;
-          max-width: 100vw !important;
-          border-radius: 0 !important;
-          border: none !important;
-          box-shadow: none !important;
+          width: 100vw !important; height: 100vh !important;
+          min-height: 100vh !important; max-width: 100vw !important;
+          border-radius: 0 !important; border: none !important; box-shadow: none !important;
         }
-        .status-bar-sim, .home-bar-sim {
-          display: none !important;
-        }
+        .status-bar-sim, .home-bar-sim { display: none !important; }
       }
     `}} />
   );
@@ -368,32 +427,64 @@ interface BarChartProps {
 export function BarChart({ data, currency = "₹" }: BarChartProps) {
   const max = Math.max(...data, 1);
   const todayIdx = (new Date().getDay() + 6) % 7;
+  const [hovered, setHovered] = useState<number | null>(null);
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "flex-end", gap: 5, height: 72 }}>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 80, position: "relative" }}>
         {data.map((v, i) => {
-          const h = v > 0 ? Math.max(6, Math.round((v / max) * 68)) : 4;
+          const pct = v > 0 ? Math.max(8, Math.round((v / max) * 76)) : 4;
           const isToday = i === todayIdx;
+          const isHovered = hovered === i;
           return (
             <div
               key={i}
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
               title={v > 0 ? fmt(v, currency) : "No data"}
               style={{
                 flex: 1,
-                height: h,
-                background: isToday ? TOKEN.amber : v > 0 ? TOKEN.surfaceHighlight : TOKEN.surfaceElevated,
-                borderRadius: "3px 3px 0 0",
+                height: pct,
+                background: isToday
+                  ? `linear-gradient(180deg, #F5B93C 0%, ${TOKEN.amber} 100%)`
+                  : v > 0
+                    ? `linear-gradient(180deg, rgba(255,255,255,0.12) 0%, ${TOKEN.surfaceHighlight} 100%)`
+                    : TOKEN.surfaceElevated,
+                borderRadius: "4px 4px 2px 2px",
                 alignSelf: "flex-end",
                 cursor: "pointer",
-                transition: "height 0.4s",
+                transition: "height 0.4s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.2s",
                 border: isToday ? "none" : `0.5px solid ${TOKEN.borderSub}`,
+                opacity: hovered !== null && !isHovered && !isToday ? 0.5 : 1,
+                boxShadow: isToday ? `0 0 12px rgba(239,159,39,0.3)` : "none",
+                position: "relative",
               }}
-            />
+            >
+              {isHovered && v > 0 && (
+                <div style={{
+                  position: "absolute",
+                  bottom: "calc(100% + 6px)",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  background: TOKEN.surfaceElevated,
+                  border: `1px solid ${TOKEN.border}`,
+                  borderRadius: 6,
+                  padding: "3px 7px",
+                  fontSize: 10,
+                  color: TOKEN.text,
+                  whiteSpace: "nowrap",
+                  zIndex: 10,
+                  pointerEvents: "none",
+                  fontWeight: 500,
+                }}>
+                  {fmt(v, currency)}
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
-      <div style={{ display: "flex", gap: 5, marginTop: 5 }}>
+      <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
         {DAY_LABELS.map((d, i) => (
           <div
             key={i}
@@ -401,6 +492,7 @@ export function BarChart({ data, currency = "₹" }: BarChartProps) {
               flex: 1,
               textAlign: "center",
               fontSize: 10,
+              fontWeight: i === todayIdx ? 600 : 400,
               color: i === todayIdx ? TOKEN.amber : TOKEN.muted,
             }}
           >
@@ -512,16 +604,29 @@ export function ExpenseRow({ expense, onDelete, onEdit, categories, currency = "
 export function CategoryBar({ category, total, max, currency = "₹" }: { category: Category; total: number; max: number; currency?: string }) {
   const pct = Math.min(100, Math.round((total / max) * 100));
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <CatIcon id={category.icon} size={14} color={category.color} />
-          <span style={{ color: TOKEN.textFaint, fontSize: 13 }}>{category.label}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{
+            width: 26, height: 26, borderRadius: 8,
+            background: `${category.color}20`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0,
+          }}>
+            <CatIcon id={category.icon} size={13} color={category.color} />
+          </div>
+          <span style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 500 }}>{category.label}</span>
         </div>
-        <span style={{ color: TOKEN.textFaint, fontSize: 13, fontFamily: TOKEN.mono }}>{fmt(total, currency)}</span>
+        <span style={{ color: TOKEN.text, fontSize: 13, fontWeight: 600 }}>{fmt(total, currency)}</span>
       </div>
-      <div style={{ height: 5, background: TOKEN.surfaceHighlight, borderRadius: 3, overflow: "hidden" }}>
-        <div style={{ width: `${pct}%`, height: "100%", background: category.color, borderRadius: 3, transition: "width 0.4s ease-out" }} />
+      <div style={{ height: 6, background: TOKEN.surfaceHighlight, borderRadius: 3, overflow: "hidden" }}>
+        <div style={{
+          width: `${pct}%`, height: "100%",
+          background: `linear-gradient(90deg, ${category.color}BB, ${category.color})`,
+          borderRadius: 3,
+          transition: "width 0.5s cubic-bezier(0.25,0.46,0.45,0.94)",
+          boxShadow: `0 0 6px ${category.color}40`,
+        }} />
       </div>
     </div>
   );
@@ -530,14 +635,25 @@ export function CategoryBar({ category, total, max, currency = "₹" }: { catego
 // ─── BudgetCard ───────────────────────────────────────────────────────────────
 export function BudgetCard({ total, count, date, currency = "₹" }: { total: number; count: number; date: string; currency?: string }) {
   return (
-    <div style={S.todayBanner}>
+    <div style={{
+      ...S.todayBanner,
+      background: `linear-gradient(135deg, ${TOKEN.surface} 0%, ${TOKEN.surfaceElevated} 100%)`,
+      borderRadius: 16,
+      border: `1px solid ${TOKEN.border}`,
+      boxShadow: "0 2px 12px rgba(0,0,0,0.18)",
+    }}>
       <div>
-        <div style={{ color: TOKEN.muted, fontSize: 11 }}>Today's total</div>
-        <div style={{ color: TOKEN.amber, fontSize: 24, fontWeight: 500, fontFamily: TOKEN.mono }}>{fmt(total, currency)}</div>
+        <div style={{ color: TOKEN.muted, fontSize: 11, letterSpacing: "0.06em", textTransform: "uppercase" }}>Today's total</div>
+        <div style={{ color: TOKEN.amber, fontSize: 26, fontWeight: 700, fontFamily: TOKEN.mono, letterSpacing: "-0.5px", marginTop: 2 }}>{fmt(total, currency)}</div>
       </div>
       <div style={{ textAlign: "right" }}>
-        <div style={{ color: "#44445A", fontSize: 11 }}>{count} expenses</div>
-        <div style={{ color: "#44445A", fontSize: 11 }}>{date}</div>
+        <div style={{
+          display: "inline-flex", alignItems: "center", gap: 4,
+          padding: "3px 10px", borderRadius: 20,
+          background: TOKEN.surfaceHighlight,
+          color: TOKEN.textFaint, fontSize: 11, marginBottom: 4,
+        }}>{count} expenses</div>
+        <div style={{ color: TOKEN.muted, fontSize: 11 }}>{date}</div>
       </div>
     </div>
   );
