@@ -900,7 +900,7 @@ export default function KharchaApp() {
         background: "linear-gradient(160deg, #0b0b10 0%, #10101a 60%, #0d0d16 100%)",
         display: "flex", flexDirection: "column", alignItems: "center",
         justifyContent: "center", padding: "40px 24px", boxSizing: "border-box", gap: 0
-      }} className="screen-enter">
+      }} className="screen-enter form-screen">
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: 48 }}>
           <div style={{
@@ -1009,7 +1009,7 @@ export default function KharchaApp() {
 
   function renderUserManage() {
     return (
-      <div style={S.screenPad} className="screen-enter">
+      <div style={S.screenPad} className="screen-enter form-screen">
         <div style={S.row}>
           <button onClick={() => go("set")} style={S.iconBtn} aria-label="Back"><ArrowLeftIcon color={TOKEN.dim} /></button>
           <div style={S.heading}>Manage Users</div>
@@ -1086,7 +1086,7 @@ export default function KharchaApp() {
         gap: 0,
         ...(shake ? { animation: "shake 0.4s ease-in-out" } : {}),
         ...(loginSuccess ? S.pulseSuccess : {}),
-      } as any} className="screen-enter">
+      } as any} className="screen-enter form-screen">
         {bioStatus && <BiometricOverlay status={bioStatus} onCancel={() => setBioStatus(null)} />}
 
         {/* Header */}
@@ -1218,7 +1218,7 @@ export default function KharchaApp() {
   // ────────────────────────────────────────────────────────────────────────────
   function renderCat() {
     return (
-      <div style={S.screenPad} className="screen-enter">
+      <div style={S.screenPad} className="screen-enter form-screen">
         {/* Header */}
         <div style={{ ...S.row, marginBottom: 4 }}>
           <div>
@@ -1366,7 +1366,7 @@ export default function KharchaApp() {
     };
 
     return (
-      <div style={S.screenPad} className="screen-enter">
+      <div style={S.screenPad} className="screen-enter form-screen">
         {/* Header */}
         <div style={S.row}>
           <button onClick={() => { go(editingExpense ? "hist" : "cat"); setAmtInput(""); setShowKeypad(false); setEditingExpense(null); }} style={S.iconBtn} aria-label="Back">
@@ -1601,6 +1601,222 @@ export default function KharchaApp() {
     const income = filterByPeriod(expenses, period).filter(e => e.type === "income");
     const incomeTotal = income.reduce((s, e) => s + e.amount, 0);
 
+    const balanceCard = (
+      <div style={S.heroCard as any}>
+        {/* Decorative glow orb */}
+        <div style={{
+          position: "absolute", top: -30, right: -20,
+          width: 120, height: 120, borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(239,159,39,0.2) 0%, transparent 70%)",
+          pointerEvents: "none",
+        }} />
+        <div style={{ color: TOKEN.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em" }}>Total {periodLabel}</div>
+        <div style={{
+          fontSize: 44, fontWeight: 800, color: TOKEN.text,
+          fontFamily: TOKEN.mono, letterSpacing: "-2px", lineHeight: 1.1,
+        }}>
+          {fmt(periodTotal, settings.currency || "₹")}
+        </div>
+        <div style={{ fontSize: 12, color: TOKEN.muted }}>{subText}</div>
+        {incomeTotal > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+            <div style={{
+              padding: "3px 10px", borderRadius: 20,
+              background: "rgba(29,158,117,0.14)",
+              border: "1px solid rgba(29,158,117,0.25)",
+              color: TOKEN.success, fontSize: 11, fontWeight: 600,
+            }}>
+              +{fmt(incomeTotal, settings.currency || "₹")} income
+            </div>
+          </div>
+        )}
+        {/* Week sparkline */}
+        <div style={{ marginTop: 8 }}>
+          <BarChart data={barData} currency={settings.currency || "₹"} />
+        </div>
+      </div>
+    );
+
+    const budgetAlert = !budgetAlertDismissed && todayTotal > settings.dailyBudget && (
+      <div style={{
+        padding: "12px 16px",
+        background: `rgba(226,75,74,0.08)`,
+        borderRadius: 16,
+        border: `1px solid rgba(226,75,74,0.25)`,
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+      }}>
+        <span style={{ fontSize: 20 }}>⚠️</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ color: TOKEN.danger, fontSize: 13, fontWeight: 600 }}>Daily budget exceeded!</div>
+          <div style={{ color: TOKEN.muted, fontSize: 11 }}>
+            Spent {fmt(todayTotal, settings.currency || "₹")} of {fmt(settings.dailyBudget, settings.currency || "₹")} today
+          </div>
+        </div>
+        <button onClick={() => setBudgetAlertDismissed(true)} style={{ background: "none", border: "none", color: TOKEN.muted, cursor: "pointer", fontSize: 16, lineHeight: 1 }}>✕</button>
+      </div>
+    );
+
+    const budgetGoalsLink = budgetGoals.length > 0 && (
+      <button
+        onClick={() => go("budget_goals")}
+        style={{
+          ...S.card, flexDirection: "row", alignItems: "center", gap: 12, cursor: "pointer",
+          border: `1px solid rgba(239,159,39,0.2)`,
+          background: "rgba(239,159,39,0.04)",
+        } as any}
+      >
+        <div style={{
+          width: 36, height: 36, borderRadius: 10,
+          background: "rgba(239,159,39,0.12)",
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
+        }}>🎯</div>
+        <div style={{ flex: 1, textAlign: "left" }}>
+          <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 600 }}>Budget Goals</div>
+          <div style={{ color: TOKEN.muted, fontSize: 11 }}>
+            {budgetGoals.filter(g => categoryTotal(expenses, g.categoryId) >= g.limit).length} categor{budgetGoals.filter(g => categoryTotal(expenses, g.categoryId) >= g.limit).length !== 1 ? "ies" : "y"} at limit
+          </div>
+        </div>
+        <span style={{ color: TOKEN.amber, fontSize: 18 }}>›</span>
+      </button>
+    );
+
+    const walletsOverview = (
+      <div>
+        <div style={{ ...S.row, marginBottom: 10 }}>
+          <div style={{ color: TOKEN.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>Accounts</div>
+          <button onClick={() => go("manage_wallets")} style={{ background: "none", border: "none", color: TOKEN.amber, fontSize: 11, cursor: "pointer" }}>Manage</button>
+        </div>
+        <div style={{ ...S.walletGrid, display: "grid", gridTemplateColumns: isDesktop ? "repeat(auto-fill, minmax(150px, 1fr))" : "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+          {wallets.map(w => {
+            const balance = sumWalletBalance(expenses, w.id, w.initialBalance);
+            return (
+              <div key={w.id} style={{
+                ...S.walletCard,
+                background: `linear-gradient(135deg, ${TOKEN.surface} 0%, ${TOKEN.surfaceElevated} 100%)`,
+                borderRadius: 16,
+                padding: 14,
+                transition: "transform 0.2s, box-shadow 0.2s",
+              }} className="wallet-card">
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 22 }}>{w.icon}</span>
+                  <div style={{ ...S.walletTag as any, background: TOKEN.surfaceHighlight }}>{w.label}</div>
+                </div>
+                <div style={{
+                  fontSize: 18, fontWeight: 700, color: balance < 0 ? TOKEN.danger : TOKEN.text,
+                  fontFamily: TOKEN.mono, letterSpacing: "-0.5px", marginTop: 4,
+                }}>
+                  {balance < 0 ? "-" : ""}{fmt(Math.abs(balance))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+
+    const securitySetup = settings.biometric && !localStorage.getItem(`bio_cred_${settings.userEmail || "default"}`) && (
+      <div style={{
+        padding: 16,
+        background: "rgba(239,159,39,0.06)",
+        borderRadius: 16,
+        border: `1px solid rgba(239,159,39,0.2)`,
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+      }}>
+        <div style={{ fontSize: 24 }}>☝️</div>
+        <div style={{ flex: 1 }}>
+          <div style={{ color: TOKEN.text, fontSize: 13, fontWeight: 600 }}>Enable Fingerprint</div>
+          <div style={{ color: TOKEN.muted, fontSize: 11 }}>Secure your app with one tap</div>
+        </div>
+        <button onClick={registerBiometrics} style={{
+          padding: "6px 14px",
+          background: TOKEN.amber,
+          color: TOKEN.amberText,
+          border: "none",
+          borderRadius: 10,
+          fontSize: 12,
+          fontWeight: 700,
+          cursor: "pointer"
+        }}>SET UP</button>
+      </div>
+    );
+
+    const categoryBreakdown = topCats.length > 0 && (
+      <div style={{ ...S.card, gap: 14 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 600 }}>By Category</div>
+          <div style={{ fontSize: 11, color: TOKEN.muted }}>Top {topCats.length}</div>
+        </div>
+        {topCats.map((c) => (
+          <CategoryBar key={c.id} category={c} total={c.total} max={maxCatTotal} currency={settings.currency || "₹"} />
+        ))}
+      </div>
+    );
+
+    const recentTransactions = (
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 600 }}>Recent</div>
+          <button onClick={() => go("hist")} style={{
+            background: "rgba(239,159,39,0.1)", border: "none",
+            color: TOKEN.amber, fontSize: 11, fontWeight: 600,
+            padding: "4px 10px", borderRadius: 20, cursor: "pointer",
+          }}>See all →</button>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {expenses.slice(0, 3).map((e) => (
+            <ExpenseRow key={e.id} expense={e} categories={categories} onDelete={deleteExpense} onEdit={handleEditOpen} currency={settings.currency || "₹"} />
+          ))}
+          {expenses.length === 0 && (
+            <div style={{
+              textAlign: "center", padding: "32px 0",
+              color: TOKEN.muted, fontSize: 13,
+              border: `1px dashed ${TOKEN.border}`,
+              borderRadius: 16,
+            }}>
+              No expenses yet — tap Add to start tracking 🎯
+            </div>
+          )}
+        </div>
+      </div>
+    );
+
+    const fab = (
+      <div style={{ display: "flex", justifyContent: "center", padding: "8px 0 4px" }}>
+        <button onClick={() => go("cat")} style={S.fab} className="fab-btn">
+          <PlusIcon color={TOKEN.amberText} />
+          <span style={{ color: TOKEN.amberText, fontSize: 14, fontWeight: 700, letterSpacing: "0.02em" }}>Add Expense</span>
+        </button>
+      </div>
+    );
+
+    const monthlyBreakdownLink = (
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingBottom: 8 }}>
+        <button
+          onClick={() => go("monthly_breakdown")}
+          style={{
+            ...S.card, flexDirection: "row", alignItems: "center",
+            gap: 12, cursor: "pointer",
+          } as any}
+        >
+          <div style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: "rgba(99,102,241,0.12)",
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
+          }}>📅</div>
+          <div style={{ flex: 1, textAlign: "left" }}>
+            <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 600 }}>Monthly Breakdown</div>
+            <div style={{ color: TOKEN.muted, fontSize: 11 }}>Day-by-day spending</div>
+          </div>
+          <span style={{ color: TOKEN.amber, fontSize: 18 }}>›</span>
+        </button>
+      </div>
+    );
+
     return (
       <div style={S.screenPad} className="screen-enter">
         {/* Header */}
@@ -1640,218 +1856,38 @@ export default function KharchaApp() {
           ))}
         </div>
 
-        {/* Hero Balance Card */}
-        <div style={S.heroCard as any}>
-          {/* Decorative glow orb */}
-          <div style={{
-            position: "absolute", top: -30, right: -20,
-            width: 120, height: 120, borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(239,159,39,0.2) 0%, transparent 70%)",
-            pointerEvents: "none",
-          }} />
-          <div style={{ color: TOKEN.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em" }}>Total {periodLabel}</div>
-          <div style={{
-            fontSize: 44, fontWeight: 800, color: TOKEN.text,
-            fontFamily: TOKEN.mono, letterSpacing: "-2px", lineHeight: 1.1,
-          }}>
-            {fmt(periodTotal, settings.currency || "₹")}
-          </div>
-          <div style={{ fontSize: 12, color: TOKEN.muted }}>{subText}</div>
-          {incomeTotal > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-              <div style={{
-                padding: "3px 10px", borderRadius: 20,
-                background: "rgba(29,158,117,0.14)",
-                border: "1px solid rgba(29,158,117,0.25)",
-                color: TOKEN.success, fontSize: 11, fontWeight: 600,
-              }}>
-                +{fmt(incomeTotal, settings.currency || "₹")} income
-              </div>
+        {isDesktop ? (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start", marginTop: 8 }}>
+            {/* Left Column */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {balanceCard}
+              {budgetAlert}
+              {walletsOverview}
             </div>
-          )}
-          {/* Week sparkline */}
-          <div style={{ marginTop: 8 }}>
-            <BarChart data={barData} currency={settings.currency || "₹"} />
-          </div>
-        </div>
-
-        {/* Budget Alert Banner */}
-        {!budgetAlertDismissed && todayTotal > settings.dailyBudget && (
-          <div style={{
-            padding: "12px 16px",
-            background: `rgba(226,75,74,0.08)`,
-            borderRadius: 16,
-            border: `1px solid rgba(226,75,74,0.25)`,
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-          }}>
-            <span style={{ fontSize: 20 }}>⚠️</span>
-            <div style={{ flex: 1 }}>
-              <div style={{ color: TOKEN.danger, fontSize: 13, fontWeight: 600 }}>Daily budget exceeded!</div>
-              <div style={{ color: TOKEN.muted, fontSize: 11 }}>
-                Spent {fmt(todayTotal, settings.currency || "₹")} of {fmt(settings.dailyBudget, settings.currency || "₹")} today
-              </div>
+            {/* Right Column */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {categoryBreakdown}
+              {recentTransactions}
+              {securitySetup}
+              {budgetGoalsLink}
+              {monthlyBreakdownLink}
+              {fab}
             </div>
-            <button onClick={() => setBudgetAlertDismissed(true)} style={{ background: "none", border: "none", color: TOKEN.muted, cursor: "pointer", fontSize: 16, lineHeight: 1 }}>✕</button>
           </div>
+        ) : (
+          /* Mobile Stack */
+          <>
+            {balanceCard}
+            {budgetAlert}
+            {budgetGoalsLink}
+            {walletsOverview}
+            {securitySetup}
+            {categoryBreakdown}
+            {recentTransactions}
+            {fab}
+            {monthlyBreakdownLink}
+          </>
         )}
-
-        {/* Budget Goals quick link */}
-        {budgetGoals.length > 0 && (
-          <button
-            onClick={() => go("budget_goals")}
-            style={{
-              ...S.card, flexDirection: "row", alignItems: "center", gap: 12, cursor: "pointer",
-              border: `1px solid rgba(239,159,39,0.2)`,
-              background: "rgba(239,159,39,0.04)",
-            } as any}
-          >
-            <div style={{
-              width: 36, height: 36, borderRadius: 10,
-              background: "rgba(239,159,39,0.12)",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
-            }}>🎯</div>
-            <div style={{ flex: 1, textAlign: "left" }}>
-              <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 600 }}>Budget Goals</div>
-              <div style={{ color: TOKEN.muted, fontSize: 11 }}>
-                {budgetGoals.filter(g => categoryTotal(expenses, g.categoryId) >= g.limit).length} categor{budgetGoals.filter(g => categoryTotal(expenses, g.categoryId) >= g.limit).length !== 1 ? "ies" : "y"} at limit
-              </div>
-            </div>
-            <span style={{ color: TOKEN.amber, fontSize: 18 }}>›</span>
-          </button>
-        )}
-
-        {/* Wallets Overview */}
-        <div>
-          <div style={{ ...S.row, marginBottom: 10 }}>
-            <div style={{ color: TOKEN.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>Accounts</div>
-            <button onClick={() => go("manage_wallets")} style={{ background: "none", border: "none", color: TOKEN.amber, fontSize: 11, cursor: "pointer" }}>Manage</button>
-          </div>
-          <div style={{ ...S.walletGrid, display: "grid", gridTemplateColumns: isDesktop ? "repeat(auto-fill, minmax(150px, 1fr))" : "repeat(2, minmax(0, 1fr))", gap: 10 }}>
-            {wallets.map(w => {
-              const balance = sumWalletBalance(expenses, w.id, w.initialBalance);
-              return (
-                <div key={w.id} style={{
-                  ...S.walletCard,
-                  background: `linear-gradient(135deg, ${TOKEN.surface} 0%, ${TOKEN.surfaceElevated} 100%)`,
-                  borderRadius: 16,
-                  padding: 14,
-                  transition: "transform 0.2s, box-shadow 0.2s",
-                }} className="wallet-card">
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <span style={{ fontSize: 22 }}>{w.icon}</span>
-                    <div style={{ ...S.walletTag as any, background: TOKEN.surfaceHighlight }}>{w.label}</div>
-                  </div>
-                  <div style={{
-                    fontSize: 18, fontWeight: 700, color: balance < 0 ? TOKEN.danger : TOKEN.text,
-                    fontFamily: TOKEN.mono, letterSpacing: "-0.5px", marginTop: 4,
-                  }}>
-                    {balance < 0 ? "-" : ""}{fmt(Math.abs(balance))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Security Setup Prompt */}
-        {settings.biometric && !localStorage.getItem(`bio_cred_${settings.userEmail || "default"}`) && (
-          <div style={{
-            padding: 16,
-            background: "rgba(239,159,39,0.06)",
-            borderRadius: 16,
-            border: `1px solid rgba(239,159,39,0.2)`,
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-          }}>
-            <div style={{ fontSize: 24 }}>☝️</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ color: TOKEN.text, fontSize: 13, fontWeight: 600 }}>Enable Fingerprint</div>
-              <div style={{ color: TOKEN.muted, fontSize: 11 }}>Secure your app with one tap</div>
-            </div>
-            <button onClick={registerBiometrics} style={{
-              padding: "6px 14px",
-              background: TOKEN.amber,
-              color: TOKEN.amberText,
-              border: "none",
-              borderRadius: 10,
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: "pointer"
-            }}>SET UP</button>
-          </div>
-        )}
-
-        {/* Category Breakdown */}
-        {topCats.length > 0 && (
-          <div style={{ ...S.card, gap: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 600 }}>By Category</div>
-              <div style={{ fontSize: 11, color: TOKEN.muted }}>Top {topCats.length}</div>
-            </div>
-            {topCats.map((c) => (
-              <CategoryBar key={c.id} category={c} total={c.total} max={maxCatTotal} currency={settings.currency || "₹"} />
-            ))}
-          </div>
-        )}
-
-        {/* Recent Transactions */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 600 }}>Recent</div>
-          <button onClick={() => go("hist")} style={{
-            background: "rgba(239,159,39,0.1)", border: "none",
-            color: TOKEN.amber, fontSize: 11, fontWeight: 600,
-            padding: "4px 10px", borderRadius: 20, cursor: "pointer",
-          }}>See all →</button>
-        </div>
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {expenses.slice(0, 3).map((e) => (
-            <ExpenseRow key={e.id} expense={e} categories={categories} onDelete={deleteExpense} onEdit={handleEditOpen} currency={settings.currency || "₹"} />
-          ))}
-          {expenses.length === 0 && (
-            <div style={{
-              textAlign: "center", padding: "32px 0",
-              color: TOKEN.muted, fontSize: 13,
-              border: `1px dashed ${TOKEN.border}`,
-              borderRadius: 16,
-            }}>
-              No expenses yet — tap Add to start tracking 🎯
-            </div>
-          )}
-        </div>
-
-        {/* FAB */}
-        <div style={{ display: "flex", justifyContent: "center", padding: "8px 0 4px" }}>
-          <button onClick={() => go("cat")} style={S.fab} className="fab-btn">
-            <PlusIcon color={TOKEN.amberText} />
-            <span style={{ color: TOKEN.amberText, fontSize: 14, fontWeight: 700, letterSpacing: "0.02em" }}>Add Expense</span>
-          </button>
-        </div>
-
-        {/* Quick links */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingBottom: 8 }}>
-          <button
-            onClick={() => go("monthly_breakdown")}
-            style={{
-              ...S.card, flexDirection: "row", alignItems: "center",
-              gap: 12, cursor: "pointer",
-            } as any}
-          >
-            <div style={{
-              width: 36, height: 36, borderRadius: 10,
-              background: "rgba(99,102,241,0.12)",
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
-            }}>📅</div>
-            <div style={{ flex: 1, textAlign: "left" }}>
-              <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 600 }}>Monthly Breakdown</div>
-              <div style={{ color: TOKEN.muted, fontSize: 11 }}>Day-by-day spending</div>
-            </div>
-            <span style={{ color: TOKEN.amber, fontSize: 18 }}>›</span>
-          </button>
-        </div>
       </div>
     );
   }
@@ -1945,7 +1981,7 @@ export default function KharchaApp() {
     const allTimeTotal = sumExpenses(expenses);
 
     return (
-      <div style={S.screenBase} className="screen-enter">
+      <div style={S.screenBase} className="screen-enter form-screen">
         {/* Header */}
         <div style={{ ...S.row, padding: "20px 20px 12px", borderBottom: `0.5px solid ${TOKEN.border}` }}>
           <button onClick={() => go("dash")} style={S.iconBtn} aria-label="Back">←</button>
@@ -2231,7 +2267,7 @@ export default function KharchaApp() {
 
   function renderChangePin() {
     return (
-      <div style={S.screenBase} className="screen-enter">
+      <div style={S.screenBase} className="screen-enter form-screen">
         <div style={{ ...S.row, padding: "20px 20px 12px", borderBottom: `0.5px solid ${TOKEN.border}` }}>
           <button onClick={() => go("set")} style={S.iconBtn} aria-label="Back">←</button>
           <div style={S.heading}>Change PIN</div>
@@ -2271,7 +2307,7 @@ export default function KharchaApp() {
 
   function renderRegistry() {
     return (
-      <div style={S.screenBase} className="screen-enter">
+      <div style={S.screenBase} className="screen-enter form-screen">
         <div style={{ ...S.row, padding: "20px 20px 12px" }}>
           <button onClick={() => go("set")} style={S.iconBtn} aria-label="Back">←</button>
           <div style={S.heading}>Security Registry</div>
@@ -2311,7 +2347,7 @@ export default function KharchaApp() {
   function renderSubscriptions() {
     const subs = expenses.filter(e => e.isRecurring);
     return (
-      <div style={S.screenPad} className="screen-enter">
+      <div style={S.screenPad} className="screen-enter form-screen">
         <div style={S.row}>
           <button onClick={() => go("set")} style={S.iconBtn} aria-label="Back"><ArrowLeftIcon color={TOKEN.dim} /></button>
           <div style={S.heading}>Subscriptions</div>
@@ -2344,7 +2380,7 @@ export default function KharchaApp() {
   function renderBudgetGoals() {
     const cur = settings.currency || "₹";
     return (
-      <div style={S.screenBase} className="screen-enter">
+      <div style={S.screenBase} className="screen-enter form-screen">
         <div style={{ ...S.row, padding: "20px 20px 12px", borderBottom: `0.5px solid ${TOKEN.border}` }}>
           <button onClick={() => go("set")} style={S.iconBtn} aria-label="Back"><ArrowLeftIcon color={TOKEN.dim} /></button>
           <div style={S.heading}>Budget Goals</div>
@@ -2541,7 +2577,7 @@ export default function KharchaApp() {
 
   function renderManageWallets() {
     return (
-      <div style={S.screenPad} className="screen-enter">
+      <div style={S.screenPad} className="screen-enter form-screen">
         <div style={S.row}>
           <button onClick={() => go("set")} style={S.iconBtn} aria-label="Back"><ArrowLeftIcon color={TOKEN.dim} /></button>
           <div style={S.heading}>Accounts</div>
@@ -2649,7 +2685,7 @@ export default function KharchaApp() {
     const colors = ["#EF9F27", "#378ADD", "#1D9E75", "#7F77DD", "#D85A30", "#639922", "#E24B4A", "#F06292"];
 
     return (
-      <div style={S.screenPad} className="screen-enter">
+      <div style={S.screenPad} className="screen-enter form-screen">
         <div style={S.row}>
           <button onClick={() => go("set")} style={S.iconBtn} aria-label="Back"><ArrowLeftIcon color={TOKEN.dim} /></button>
           <div style={S.heading}>Categories</div>

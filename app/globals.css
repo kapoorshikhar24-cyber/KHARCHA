@@ -83,7 +83,7 @@ body {
 /* ─── Interactive utilities ───────────────────────────────────────────────── */
 
 .key-btn:active {
-  background: #1A1A24 !important;
+  background: var(--token-surfaceHighlight) !important;
   transform: scale(0.93) !important;
 }
 
@@ -204,4 +204,18 @@ input {
 .settings-item:active {
   transform: scale(0.99);
 }
+
+/* ─── Desktop Layout Constraints ────────────────────────────────────────── */
+
+@media (min-width: 769px) {
+  .form-screen {
+    max-width: 580px;
+    margin: 0 auto !important;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+
 
