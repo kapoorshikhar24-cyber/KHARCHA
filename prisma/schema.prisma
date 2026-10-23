@@ -1,0 +1,127 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                  String           @id @default(cuid())
+  name                String
+  email               String?
+  avatar              String?
+  pinCode             String?          @default("1234")
+  biometricCredential String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  settings            UserSettings?
+  expenses            Expense[]
+  categories          CustomCategory[]
+  wallets             Wallet[]
+  budgetGoals         BudgetGoal[]
+  auditLogs           AuditLog[]
+}
+
+model UserSettings {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme           String   @default("dark")
+  accentColor     String?
+  biometric       Boolean  @default(true)
+  pin             Boolean  @default(true)
+  voice           Boolean  @default(true)
+  haptic          Boolean  @default(true)
+  offline         Boolean  @default(true)
+  dailyBudget     Float    @default(2000)
+  monthlyBudget   Float    @default(50000)
+  layoutMode      String   @default("mobile")
+  currency        String   @default("₹")
+  defaultWalletId String   @default("cash")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Wallet {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  walletKey      String
+  label          String
+  icon           String
+  color          String
+  initialBalance Float    @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([userId, walletKey])
+}
+
+model CustomCategory {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryKey   String
+  label         String
+  icon          String
+  color         String
+  bg            String
+  defaultAmount Float?
+  type          String   @default("expense")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, categoryKey])
+}
+
+model BudgetGoal {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId String
+  limit      Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([userId, categoryId])
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    String
+  amount      Float
+  note        String   @default("")
+  createdAt   String
+  type        String   @default("expense")
+  walletId    String?
+  isRecurring Boolean  @default(false)
+  frequency   String?
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([userId, category])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  details   String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model AppState {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
