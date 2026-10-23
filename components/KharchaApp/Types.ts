@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 export type ScreenName = "lock" | "cat" | "amt" | "dash" | "hist" | "set" | "manage_cats" | "change_pin" | "registry" | "reports" | "subscriptions" | "manage_wallets" | "user_select" | "user_manage" | "budget_goals" | "monthly_breakdown" | "audit_logs";
-=======
-export type ScreenName = "lock" | "cat" | "amt" | "dash" | "hist" | "set" | "manage_cats" | "change_pin" | "registry" | "reports" | "subscriptions" | "manage_wallets" | "user_select" | "user_manage" | "budget_goals" | "monthly_breakdown";
->>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
 export type PeriodName = "today" | "week" | "month";
 export type RecurrenceFrequency = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -52,11 +48,7 @@ export interface Settings {
   offline: boolean;
   dailyBudget: number;
   monthlyBudget: number;
-<<<<<<< HEAD
   layoutMode?: "mobile" | "desktop" | "windows" | "phone";
-=======
-  layoutMode?: "mobile" | "desktop";
->>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
   userName: string;
   userEmail: string;
   profileImage?: string;

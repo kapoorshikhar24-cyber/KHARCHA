@@ -11,7 +11,6 @@ export const TOKEN = {
   border: "var(--token-border)",
   borderSub: "var(--token-borderSub)",
   amber: "var(--token-amber)",
-<<<<<<< HEAD
   amberGlow: "var(--token-amberGlow)",
   amberText: "var(--token-amberText)",
   danger: "var(--token-danger)",
@@ -27,14 +26,6 @@ export const TOKEN = {
   heroBg: "var(--token-heroBg)",
   kpiBg: "var(--token-kpiBg)",
   phoneBezel: "var(--token-phoneBezel)",
-=======
-  amberText: "var(--token-amberText)",
-  danger: "var(--token-danger)",
-  success: "var(--token-success)",
-  surface: "var(--token-surface)",
-  surfaceElevated: "var(--token-surfaceElevated)",
-  surfaceHighlight: "var(--token-surfaceHighlight)",
->>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
   mono: "'JetBrains Mono', monospace",
 };
 
@@ -48,7 +39,6 @@ export const S: { [key: string]: CSSProperties } = {
     padding: 16,
   },
   phone: {
-<<<<<<< HEAD
     width: 390,
     height: 824,
     maxHeight: "92vh",
@@ -61,24 +51,10 @@ export const S: { [key: string]: CSSProperties } = {
     display: "flex",
     flexDirection: "column",
     boxShadow: "0 36px 90px rgba(0,0,0,0.35), 0 0 0 1px var(--token-border), inset 0 1px 0 rgba(255,255,255,0.1)",
-=======
-    width: 380,
-    height: 812,
-    maxHeight: "90vh",
-    maxWidth: "100%",
-    background: TOKEN.phone,
-    borderRadius: 44,
-    border: "12px solid #1A1A24",
-    overflow: "hidden",
-    display: "flex",
-    flexDirection: "column",
-    boxShadow: "0 28px 72px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.05)",
->>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
     position: "relative" as "relative",
   },
   desktopContainer: {
     width: "100%",
-<<<<<<< HEAD
     maxWidth: 1440,
     background: "var(--token-desktopBg, rgba(13, 13, 21, 0.92))",
     backdropFilter: "blur(32px)",
@@ -117,27 +93,6 @@ export const S: { [key: string]: CSSProperties } = {
     display: "flex",
     flexDirection: "column",
     padding: "24px 14px",
-=======
-    maxWidth: 1280,
-    background: TOKEN.phone,
-    borderRadius: 28,
-    border: `1px solid ${TOKEN.border}`,
-    overflow: "hidden",
-    display: "flex",
-    flexDirection: "row",
-    height: "94vh",
-    minHeight: 600,
-    boxShadow: "0 24px 80px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.03)",
-  },
-  sidebar: {
-    width: 256,
-    background: "rgba(10,10,18,0.82)",
-    backdropFilter: "blur(24px)",
-    borderRight: `1px solid rgba(255,255,255,0.04)`,
-    display: "flex",
-    flexDirection: "column",
-    padding: "28px 12px",
->>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
     gap: 6,
     flexShrink: 0,
   },
@@ -148,7 +103,6 @@ export const S: { [key: string]: CSSProperties } = {
     overflow: "hidden",
     background: TOKEN.bg,
   },
-<<<<<<< HEAD
   windowsKpiCard: {
     background: "var(--token-kpiBg, linear-gradient(145deg, rgba(24, 24, 36, 0.85) 0%, rgba(14, 14, 22, 0.9) 100%))",
     borderRadius: 16,
@@ -167,24 +121,13 @@ export const S: { [key: string]: CSSProperties } = {
     borderRadius: 24,
     padding: "24px 20px",
     border: "1px solid var(--token-border)",
-=======
-  heroCard: {
-    background: "linear-gradient(135deg, rgba(239,159,39,0.12) 0%, rgba(239,159,39,0.04) 60%, rgba(14,14,22,0.9) 100%)",
-    borderRadius: 24,
-    padding: "24px 20px",
-    border: "1px solid rgba(239,159,39,0.18)",
->>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
     display: "flex",
     flexDirection: "column" as "column",
     gap: 8,
     position: "relative" as "relative",
     overflow: "hidden" as "hidden",
-<<<<<<< HEAD
     boxShadow: "0 16px 40px -10px rgba(239,159,39,0.18), 0 4px 16px rgba(0,0,0,0.15)",
     backdropFilter: "blur(20px)",
-=======
-    boxShadow: "0 8px 32px rgba(239,159,39,0.08), 0 2px 8px rgba(0,0,0,0.3)",
->>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
   },
   statusBar: {
     background: TOKEN.phone,
@@ -354,7 +297,6 @@ export const S: { [key: string]: CSSProperties } = {
     flexShrink: 0,
   },
   card: {
-<<<<<<< HEAD
     background: "linear-gradient(160deg, rgba(22, 22, 34, 0.75) 0%, rgba(15, 15, 23, 0.88) 100%)",
     borderRadius: 20,
     padding: 16,
@@ -376,27 +318,6 @@ export const S: { [key: string]: CSSProperties } = {
     position: "relative",
     overflow: "hidden",
     boxShadow: "0 4px 14px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.04)",
-=======
-    background: TOKEN.surface,
-    borderRadius: 18,
-    padding: 16,
-    border: `1px solid ${TOKEN.border}`,
-    display: "flex",
-    flexDirection: "column",
-    gap: 4,
-    transition: "border-color 0.2s",
-  },
-  cardRow: {
-    background: TOKEN.surface,
-    borderRadius: 12,
-    padding: "11px 14px",
-    border: `0.5px solid ${TOKEN.border}`,
-    display: "flex",
-    alignItems: "center",
-    gap: 11,
-    position: "relative",
-    overflow: "hidden",
->>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
   },
   noteInput: {
     background: "transparent",
@@ -443,7 +364,6 @@ export const S: { [key: string]: CSSProperties } = {
   primaryBtn: {
     width: "100%",
     padding: 15,
-<<<<<<< HEAD
     background: `linear-gradient(135deg, ${TOKEN.amber} 0%, #D85A30 100%)`,
     border: "none",
     borderRadius: 14,
@@ -454,16 +374,6 @@ export const S: { [key: string]: CSSProperties } = {
     letterSpacing: "0.02em",
     boxShadow: `0 8px 24px rgba(239, 159, 39, 0.35), inset 0 1px 0 rgba(255,255,255,0.25)`,
     transition: "transform 0.15s ease, box-shadow 0.15s ease",
-=======
-    background: TOKEN.amber,
-    border: "none",
-    borderRadius: 14,
-    color: TOKEN.amberText,
-    fontSize: 15,
-    fontWeight: 500,
-    cursor: "pointer",
-    letterSpacing: "0.02em",
->>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
   },
   tabRow: {
     display: "flex",

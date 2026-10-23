@@ -9,17 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
-<<<<<<< HEAD
     "@prisma/client": "6.19.3",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "next": "16.2.6",
     "prisma": "6.19.3",
-=======
-    "html2canvas": "^1.4.1",
-    "jspdf": "^4.2.1",
-    "next": "16.2.6",
->>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "recharts": "^3.8.1",

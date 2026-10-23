@@ -23,7 +23,6 @@ export const WALLETS: Wallet[] = [
 ];
 
 export const CATEGORY_KEYWORDS: Record<string, string[]> = {
-<<<<<<< HEAD
   food: [
     "lunch", "dinner", "breakfast", "swiggy", "zomato", "pizza", "coffee", "restaurant", "burger",
     "doodh", "milk", "chai", "tea", "kirana", "ration", "grocery", "groceries", "sabzi", "roti",
@@ -68,15 +67,6 @@ export const INCOME_KEYWORDS = [
   "cashback", "refund", "dividend", "interest", "income", "incoming", "payment received"
 ];
 
-=======
-  food: ["lunch", "dinner", "breakfast", "swiggy", "zomato", "pizza", "coffee", "restaurant", "burger"],
-  travel: ["uber", "ola", "auto", "taxi", "flight", "train", "metro", "bus"],
-  fuel: ["petrol", "diesel", "cng", "fuel", "gas"],
-  shopping: ["amazon", "flipkart", "myntra", "clothes", "mall", "shoes"],
-  bills: ["rent", "electricity", "water", "internet", "wifi", "netflix", "spotify", "mobile", "recharge"],
-};
-
->>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
 export const AMOUNT_PRESETS = [50, 100, 200, 500, 1000];
 
 export const DAY_LABELS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
