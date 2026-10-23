@@ -14,6 +14,7 @@ export function GlobalStyles() {
       @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
       .theme-dark {
+<<<<<<< HEAD
         --token-bg: #07070A;
         --token-phone: #0D0D15;
         --token-text: #F8F8FC;
@@ -68,6 +69,50 @@ export function GlobalStyles() {
         --token-heroBg: linear-gradient(145deg, rgba(245, 158, 11, 0.14) 0%, rgba(217, 119, 6, 0.07) 45%, rgba(255, 255, 255, 0.98) 100%);
         --token-kpiBg: linear-gradient(145deg, #FFFFFF 0%, #F8F9FD 100%);
         --token-phoneBezel: #E2E3EB;
+=======
+        --token-bg: #05050A;
+        --token-phone: #0C0C14;
+        --token-text: #F0EEE5;
+        --token-textSub: #D0CEC8;
+        --token-textFaint: #C0BEB8;
+        --token-muted: #44445A;
+        --token-dim: #55556A;
+        --token-border: #28283C;
+        --token-borderSub: #1A1A26;
+        --token-amber: #EF9F27;
+        --token-amberGlow: rgba(239,159,39,0.18);
+        --token-amberText: #3A1E00;
+        --token-danger: #E24B4A;
+        --token-dangerGlow: rgba(226,75,74,0.15);
+        --token-success: #1D9E75;
+        --token-successGlow: rgba(29,158,117,0.15);
+        --token-surface: #14141E;
+        --token-surfaceElevated: #1A1A26;
+        --token-surfaceHighlight: #242432;
+        --token-glass: rgba(14,14,22,0.75);
+      }
+      .theme-light {
+        --token-bg: #F0F0F5;
+        --token-phone: #FFFFFF;
+        --token-text: #1C1C1E;
+        --token-textSub: #3A3A3C;
+        --token-textFaint: #636366;
+        --token-muted: #AEAEB2;
+        --token-dim: #8E8E93;
+        --token-border: #E0E0EA;
+        --token-borderSub: #F0F0F7;
+        --token-amber: #EF9F27;
+        --token-amberGlow: rgba(239,159,39,0.12);
+        --token-amberText: #FFFFFF;
+        --token-danger: #FF3B30;
+        --token-dangerGlow: rgba(255,59,48,0.12);
+        --token-success: #34C759;
+        --token-successGlow: rgba(52,199,89,0.12);
+        --token-surface: #F2F2F7;
+        --token-surfaceElevated: #FFFFFF;
+        --token-surfaceHighlight: #E5E5EA;
+        --token-glass: rgba(255,255,255,0.75);
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
       }
 
       /* ── Base font ───────────────────────────────────────────── */
@@ -262,6 +307,7 @@ export function PlusIcon({ size = 16, color = "currentColor" }) {
   );
 }
 
+<<<<<<< HEAD
 export function MicIcon({ size = 16, color = "currentColor" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -273,6 +319,8 @@ export function MicIcon({ size = 16, color = "currentColor" }) {
   );
 }
 
+=======
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
 export function ArrowLeftIcon({ size = 16, color = "currentColor" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -551,6 +599,7 @@ interface ExpenseRowProps {
 export function ExpenseRow({ expense, onDelete, onEdit, categories, currency = "₹" }: ExpenseRowProps) {
   const [swiped, setSwiped] = useState(false);
   const cat = categories.find((c) => c.id === expense.category) ?? categories[0];
+<<<<<<< HEAD
   const isIncome = expense.type === "income";
 
   return (
@@ -561,10 +610,20 @@ export function ExpenseRow({ expense, onDelete, onEdit, categories, currency = "
         borderLeft: `3px solid ${isIncome ? TOKEN.success : cat.color || TOKEN.amber}`,
         transform: swiped ? "translateX(-112px)" : "translateX(0)",
         transition: "transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s, background 0.2s",
+=======
+
+  return (
+    <div
+      style={{
+        ...S.cardRow,
+        transform: swiped ? "translateX(-112px)" : "translateX(0)",
+        transition: "transform 0.2s",
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
         cursor: "pointer",
       }}
       onClick={() => setSwiped((s) => !s)}
     >
+<<<<<<< HEAD
       <div style={{
         ...S.picon,
         background: cat.bg || "rgba(255,255,255,0.06)",
@@ -589,10 +648,24 @@ export function ExpenseRow({ expense, onDelete, onEdit, categories, currency = "
             </span>
           )}
           {expense.isRecurring && <span title="Recurring">🔁</span>}
+=======
+      <div style={{ ...S.picon, background: cat.bg }}>
+        <CatIcon id={cat.icon} size={18} color={cat.color} />
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 400 }}>
+          {expense.note || cat.label}
+        </div>
+        <div style={{ color: TOKEN.muted, fontSize: 11, marginTop: 2 }}>
+          {cat.label} &bull; {new Date(expense.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
+          {expense.type === "income" && <span style={{ color: TOKEN.success, marginLeft: 4, fontSize: 10 }}>+INCOME</span>}
+          {expense.isRecurring && <span style={{ color: TOKEN.amber, marginLeft: 4, fontSize: 10 }}>🔁</span>}
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
         </div>
       </div>
       <div
         style={{
+<<<<<<< HEAD
           color: isIncome ? TOKEN.success : TOKEN.text,
           fontSize: 14,
           fontVariantNumeric: "tabular-nums",
@@ -607,6 +680,20 @@ export function ExpenseRow({ expense, onDelete, onEdit, categories, currency = "
 
       {swiped && (
         <div style={{ display: "flex", gap: 4, position: "absolute", right: 0, height: "100%", alignItems: "center" }}>
+=======
+          color: expense.type === "income" ? TOKEN.success : TOKEN.text,
+          fontSize: 14,
+          fontVariantNumeric: "tabular-nums",
+          fontWeight: 500,
+          fontFamily: TOKEN.mono,
+        }}
+      >
+        {expense.type === "income" ? "+" : ""}{fmt(expense.amount, currency)}
+      </div>
+
+      {swiped && (
+        <div style={{ display: "flex", gap: 4, position: "absolute", right: 0 }}>
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
           {onEdit && (
             <button
               onClick={(e) => {
@@ -616,10 +703,16 @@ export function ExpenseRow({ expense, onDelete, onEdit, categories, currency = "
               }}
               style={{
                 ...S.deleteSlide,
+<<<<<<< HEAD
                 background: "rgba(55, 138, 221, 0.2)",
                 color: "#378ADD",
                 width: 48,
                 borderRadius: "8px 0 0 8px",
+=======
+                background: "rgba(55, 138, 221, 0.15)",
+                color: "#378ADD",
+                width: 48
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
               }}
               aria-label="Edit expense"
             >
@@ -631,7 +724,11 @@ export function ExpenseRow({ expense, onDelete, onEdit, categories, currency = "
               e.stopPropagation();
               onDelete(expense.id);
             }}
+<<<<<<< HEAD
             style={{ ...S.deleteSlide, width: 48, borderRadius: "0 8px 8px 0" }}
+=======
+            style={{ ...S.deleteSlide, width: 48 }}
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
             aria-label="Delete expense"
           >
             🗑️
@@ -766,6 +863,7 @@ export function SparkLine({ data, color = TOKEN.amber, height = 48 }: { data: nu
   );
 }
 
+<<<<<<< HEAD
 // ─── Windows 11 Title Bar ─────────────────────────────────────────────────────
 export function WindowsTitleBar({
   userName,
@@ -1002,3 +1100,5 @@ export function PhoneTopBar({
   );
 }
 
+=======
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706

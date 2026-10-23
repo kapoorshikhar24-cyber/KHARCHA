@@ -10,17 +10,28 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { ScreenName, PeriodName, Category, Expense, Settings, Wallet, UserProfile, BudgetGoal } from "./Types";
+<<<<<<< HEAD
 import { CATEGORIES, INCOME_CATEGORIES, AMOUNT_PRESETS, DEFAULT_SETTINGS, STORAGE_KEYS, WALLETS, CATEGORY_KEYWORDS, INCOME_KEYWORDS, getUserStorageKeys } from "./Constants";
+=======
+import { CATEGORIES, INCOME_CATEGORIES, AMOUNT_PRESETS, DEFAULT_SETTINGS, STORAGE_KEYS, WALLETS, CATEGORY_KEYWORDS, getUserStorageKeys } from "./Constants";
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
 import {
   fmt, todayKey, greeting, dateLabel,
   loadStorage, saveStorage,
   filterByPeriod, sumExpenses, sumIncome, sumWalletBalance, categoryTotal,
+<<<<<<< HEAD
   weeklyTotals, groupByDate, generateId, smartMatchCategory, extractVoiceAmount,
+=======
+  weeklyTotals, groupByDate, generateId, smartMatchCategory,
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
   triggerHaptic, HapticType,
   parseCSVToExpenses, getDayByDayMonthly,
 } from "./Utils";
 import { S, TOKEN } from "./Styles";
+<<<<<<< HEAD
 import enterpriseStorage, { EnterpriseAuditLog } from "./EnterpriseStorage";
+=======
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
 
 const ALL_CATEGORIES = [...CATEGORIES, ...INCOME_CATEGORIES];
 
@@ -69,10 +80,16 @@ import {
   StatusBar, HomeBar, Toggle, FingerprintIcon,
   SectionLabel, TogRow,
   BarChart, ExpenseRow, CategoryBar, BudgetCard,
+<<<<<<< HEAD
   CatIcon, ArrowLeftIcon, BellIcon, PlusIcon, MicIcon,
   GlobalStyles, BiometricOverlay, ArrowDownIcon,
   BudgetGoalBar, SparkLine,
   WindowsTitleBar, PhoneTopBar,
+=======
+  CatIcon, ArrowLeftIcon, BellIcon, PlusIcon,
+  GlobalStyles, BiometricOverlay, ArrowDownIcon,
+  BudgetGoalBar, SparkLine,
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
 } from "./SubComponents";
 import ReportsScreen from "./ReportsScreen";
 
@@ -82,20 +99,26 @@ export default function KharchaApp() {
   // ── Multi-user state ─────────────────────────────────────────────────────────
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [activeUserId, setActiveUserId] = useState<string>("");
+<<<<<<< HEAD
   const [pendingSwitchUserId, setPendingSwitchUserId] = useState<string | null>(null);
   const [switchPinInput, setSwitchPinInput] = useState<string>("");
   const [switchPinError, setSwitchPinError] = useState<boolean>(false);
   const [switchShake, setSwitchShake] = useState<boolean>(false);
+=======
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
 
   // ── Core state ──────────────────────────────────────────────────────────────
   const [screen, setScreen] = useState<ScreenName>("user_select");
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [hasLoaded, setHasLoaded] = useState(false);
+<<<<<<< HEAD
   const [dbConnected, setDbConnected] = useState<boolean>(true);
   const [auditLogs, setAuditLogs] = useState<EnterpriseAuditLog[]>([]);
   const [auditLoading, setAuditLoading] = useState<boolean>(false);
   const backupInputRef = useRef<HTMLInputElement>(null);
+=======
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
 
   // ── Amount screen ────────────────────────────────────────────────────────────
   const [selCat, setSelCat] = useState<Category>(CATEGORIES[0]);
@@ -121,6 +144,7 @@ export default function KharchaApp() {
   const [period, setPeriod] = useState<PeriodName>("today");
   const [wallets, setWallets] = useState<Wallet[]>(WALLETS);
 
+<<<<<<< HEAD
   // ── History & Breakdown ──────────────────────────────────────────────────────
   const [histCat, setHistCat] = useState<string>("all");
   const [histSearch, setHistSearch] = useState<string>("");
@@ -142,6 +166,11 @@ export default function KharchaApp() {
   const [regMinAmt, setRegMinAmt] = useState<string>("");
   const [regMaxAmt, setRegMaxAmt] = useState<string>("");
   const [regSelectedIds, setRegSelectedIds] = useState<string[]>([]);
+=======
+  // ── History ──────────────────────────────────────────────────────────────────
+  const [histCat, setHistCat] = useState<string>("all");
+  const [histSearch, setHistSearch] = useState<string>("");
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
   const [manageCatType, setManageCatType] = useState<"expense" | "income">("expense");
 
   // ── Voice ────────────────────────────────────────────────────────────────────
@@ -174,6 +203,7 @@ export default function KharchaApp() {
   // ── Budget alert dismissed ───────────────────────────────────────────────────
   const [budgetAlertDismissed, setBudgetAlertDismissed] = useState(false);
 
+<<<<<<< HEAD
   // ── Responsive Layout & Windows vs Phone State ────────────────────────────────
   const [isDesktop, setIsDesktop] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
@@ -186,13 +216,23 @@ export default function KharchaApp() {
   const [quickType, setQuickType] = useState<"expense" | "income">("expense");
   const [quickSaving, setQuickSaving] = useState(false);
   const [desktopLedgerSearch, setDesktopLedgerSearch] = useState("");
+=======
+  // ── Responsive Layout State ──────────────────────────────────────────────────
+  const [isDesktop, setIsDesktop] = useState(false);
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const updateLayout = () => {
+<<<<<<< HEAD
       if (settings.layoutMode === "desktop" || settings.layoutMode === "windows") {
         setIsDesktop(true);
       } else if (settings.layoutMode === "mobile" || settings.layoutMode === "phone") {
+=======
+      if (settings.layoutMode === "desktop") {
+        setIsDesktop(true);
+      } else if (settings.layoutMode === "mobile") {
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
         setIsDesktop(false);
       } else {
         setIsDesktop(window.innerWidth > 768);
@@ -203,6 +243,7 @@ export default function KharchaApp() {
     return () => window.removeEventListener("resize", updateLayout);
   }, [settings.layoutMode]);
 
+<<<<<<< HEAD
   const toggleUiMode = useCallback(() => {
     const nextMode = isDesktop ? "phone" : "windows";
     const nextSettings: Settings = { ...settings, layoutMode: nextMode };
@@ -331,6 +372,70 @@ export default function KharchaApp() {
     return () => {
       cancelled = true;
     };
+=======
+  // ── CSV import ref ───────────────────────────────────────────────────────────
+  const csvInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Load from storage (multi-user aware) ─────────────────────────────────────
+  useEffect(() => {
+    // Load user directory
+    const savedUsers = loadStorage<UserProfile[]>(STORAGE_KEYS.USERS, []);
+    const savedActiveId = loadStorage<string>(STORAGE_KEYS.ACTIVE_USER, "");
+
+    if (savedUsers.length === 0) {
+      // First-ever launch OR single-user migration:
+      // Migrate existing data into a new "User 1" profile
+      const legacyExp = loadStorage<Expense[]>(STORAGE_KEYS.EXPENSES, []);
+      const legacySett = loadStorage<Settings>(STORAGE_KEYS.SETTINGS, DEFAULT_SETTINGS);
+      const newId = generateId();
+      const newUser: UserProfile = {
+        id: newId,
+        name: legacySett.userName || "User 1",
+        avatar: legacySett.profileImage,
+        createdAt: new Date().toISOString(),
+      };
+      const userKeys = getUserStorageKeys(newId);
+      saveStorage(userKeys.EXPENSES, legacyExp);
+      saveStorage(userKeys.SETTINGS, legacySett);
+      saveStorage(STORAGE_KEYS.USERS, [newUser]);
+      saveStorage(STORAGE_KEYS.ACTIVE_USER, newId);
+      setUsers([newUser]);
+      setActiveUserId(newId);
+      setExpenses(legacyExp);
+      setSettings(legacySett);
+      setCategories(legacySett.customCategories || ALL_CATEGORIES);
+      setWallets(legacySett.wallets || WALLETS);
+      setBudgetGoals(legacySett.budgetGoals || []);
+
+      // Route directly based on security settings
+      if (legacySett.pin || legacySett.biometric) {
+        setScreen("lock");
+      } else {
+        setScreen("dash");
+      }
+    } else {
+      // Normal multi-user load
+      setUsers(savedUsers);
+      const userId = savedActiveId || savedUsers[0].id;
+      setActiveUserId(userId);
+      const userKeys = getUserStorageKeys(userId);
+      const savedExp = loadStorage<Expense[]>(userKeys.EXPENSES, []);
+      const savedSet = loadStorage<Settings>(userKeys.SETTINGS, DEFAULT_SETTINGS);
+      setExpenses(savedExp);
+      setSettings(savedSet);
+      setCategories(savedSet.customCategories || ALL_CATEGORIES);
+      setWallets(savedSet.wallets || WALLETS);
+      setBudgetGoals(savedSet.budgetGoals || []);
+
+      // Route directly based on security settings
+      if (savedSet.pin || savedSet.biometric) {
+        setScreen("lock");
+      } else {
+        setScreen("dash");
+      }
+    }
+    setHasLoaded(true);
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
   }, []);
 
   // ── Navigation ───────────────────────────────────────────────────────────────
@@ -468,6 +573,7 @@ export default function KharchaApp() {
     );
   };
 
+<<<<<<< HEAD
   const renderSwitchPinModal = () => {
     if (!pendingSwitchUserId) return null;
     const targetUser = users.find(u => u.id === pendingSwitchUserId);
@@ -663,6 +769,8 @@ export default function KharchaApp() {
     );
   };
 
+=======
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
   // ── Auth Handlers ───────────────────────────────────────────────────────────
   const handleBiometric = useCallback(async () => {
     if (!settings.biometric || bioStatus) return;
@@ -783,6 +891,7 @@ export default function KharchaApp() {
     saveStorage(userKeys.SETTINGS, nextSettings);
   }, [settings, categories, budgetGoals, hasLoaded, activeUserId]);
 
+<<<<<<< HEAD
   // ── Debounced Enterprise DB Sync (ACID Transaction) ─────────────────────────────
   useEffect(() => {
     if (!hasLoaded || !activeUserId) return;
@@ -831,6 +940,24 @@ export default function KharchaApp() {
     saveStorage(STORAGE_KEYS.ACTIVE_USER, userId);
     enterpriseStorage.setActiveUser(userId).catch(console.error);
 
+=======
+  const clearPin = () => setPinInput("");
+
+  // ── Multi-user actions ────────────────────────────────────────────────────────
+  const switchUser = (userId: string) => {
+    // Save current user data first
+    if (activeUserId) {
+      const currKeys = getUserStorageKeys(activeUserId);
+      saveStorage(currKeys.EXPENSES, expenses);
+      saveStorage(currKeys.SETTINGS, { ...settings, customCategories: categories });
+    }
+    // Load new user data
+    const userKeys = getUserStorageKeys(userId);
+    const newExp = loadStorage<Expense[]>(userKeys.EXPENSES, []);
+    const newSet = loadStorage<Settings>(userKeys.SETTINGS, DEFAULT_SETTINGS);
+    setActiveUserId(userId);
+    saveStorage(STORAGE_KEYS.ACTIVE_USER, userId);
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
     setExpenses(newExp);
     setSettings(newSet);
     setCategories(newSet.customCategories || ALL_CATEGORIES);
@@ -840,6 +967,7 @@ export default function KharchaApp() {
     setPinInput("");
     setLoginSuccess(false);
     setBioStatus(null);
+<<<<<<< HEAD
     setPendingSwitchUserId(null);
     setSwitchPinInput("");
     setSwitchPinError(false);
@@ -948,6 +1076,17 @@ export default function KharchaApp() {
       }, 500);
     }
   }, [pendingSwitchUserId, settings.haptic, executeSwitchUser]);
+=======
+    
+    // If target user has security enabled, go to lock, otherwise go straight to dashboard
+    if (newSet.pin || newSet.biometric) {
+      setScreen("lock");
+    } else {
+      setScreen("dash");
+    }
+    if (settings.haptic) triggerHaptic("medium");
+  };
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
 
   const createUser = (name: string) => {
     const newId = generateId();
@@ -959,6 +1098,7 @@ export default function KharchaApp() {
     const updated = [...users, newUser];
     setUsers(updated);
     saveStorage(STORAGE_KEYS.USERS, updated);
+<<<<<<< HEAD
 
     // Enterprise DB sync
     enterpriseStorage.createUser({
@@ -968,6 +1108,8 @@ export default function KharchaApp() {
       categories: ALL_CATEGORIES,
     }).catch(console.error);
 
+=======
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
     if (settings.haptic) triggerHaptic("success");
     return newId;
   };
@@ -977,12 +1119,17 @@ export default function KharchaApp() {
     const updated = users.filter(u => u.id !== userId);
     setUsers(updated);
     saveStorage(STORAGE_KEYS.USERS, updated);
+<<<<<<< HEAD
 
     // Enterprise DB cascade delete
     enterpriseStorage.deleteUser(userId).catch(console.error);
 
     // If deleting active user, switch to first remaining user
     if (userId === activeUserId) executeSwitchUser(updated[0].id);
+=======
+    // If deleting active user, switch to first remaining user
+    if (userId === activeUserId) switchUser(updated[0].id);
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
     if (settings.haptic) triggerHaptic("medium");
   };
 
@@ -993,7 +1140,10 @@ export default function KharchaApp() {
     // Also update settings.userName if it's the active user
     if (userId === activeUserId) {
       setSettings(s => ({ ...s, userName: newName }));
+<<<<<<< HEAD
       enterpriseStorage.saveSettings(userId, { ...settings, userName: newName }, categories, wallets, budgetGoals).catch(console.error);
+=======
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
     }
   };
 
@@ -1073,6 +1223,7 @@ export default function KharchaApp() {
     go("amt");
   }, [go]);
 
+<<<<<<< HEAD
   const handleDuplicateExpense = useCallback((item: Expense) => {
     const duplicated: Expense = {
       ...item,
@@ -1106,6 +1257,8 @@ export default function KharchaApp() {
     setTimeout(() => setQuickSaving(false), 1000);
   }, [quickAmt, quickCatId, quickNote, quickType, quickWalletId, settings.haptic]);
 
+=======
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
   const handleCSVImport = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1143,6 +1296,7 @@ export default function KharchaApp() {
         return;
       }
 
+<<<<<<< HEAD
       if (pendingSwitchUserId) {
         if (/^[0-9]$/.test(e.key)) {
           e.preventDefault();
@@ -1160,6 +1314,8 @@ export default function KharchaApp() {
         return;
       }
 
+=======
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
       if (screen === "lock" && settings.pin) {
         if (/^[0-9]$/.test(e.key)) {
           e.preventDefault();
@@ -1205,7 +1361,11 @@ export default function KharchaApp() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
+<<<<<<< HEAD
   }, [screen, settings.pin, settings.haptic, handlePinInput, addExpense, pendingSwitchUserId, handleSwitchPinInput]);
+=======
+  }, [screen, settings.pin, settings.haptic, handlePinInput, addExpense]);
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
 
   const registerBiometrics = useCallback(async () => {
     try {
@@ -1273,6 +1433,7 @@ export default function KharchaApp() {
     const noteMatch = !histSearch ||
       (e.note || "").toLowerCase().includes(histSearch.toLowerCase()) ||
       e.category.includes(histSearch.toLowerCase());
+<<<<<<< HEAD
 
     let timeMatch = true;
     if (histTime !== "all") {
@@ -1303,10 +1464,17 @@ export default function KharchaApp() {
     if (histSort === "date_asc") return a.localeCompare(b);
     return b.localeCompare(a);
   });
+=======
+    return catMatch && noteMatch;
+  });
+  const groupedHistory = groupByDate(filteredExpenses);
+  const historyDates = Object.keys(groupedHistory).sort().reverse();
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
 
   // ── Voice Logic ─────────────────────────────────────────────────────────────
   function parseVoiceInput(text: string) {
     const lower = text.toLowerCase();
+<<<<<<< HEAD
     
     // 1. Spoken Word & Numeric Amount Extractor (handles "1200", "5k", "two thousand five hundred", "fifty rupees", etc.)
     const amount = extractVoiceAmount(lower);
@@ -1331,6 +1499,27 @@ export default function KharchaApp() {
     }
 
     // 4. Note formatting
+=======
+    let amount = 0;
+    
+    // Improved number extraction (handles "paid 1200", "spent 450", etc)
+    const numMatch = lower.match(/\b\d+(\.\d{1,2})?\b/);
+    if (numMatch) {
+      amount = parseFloat(numMatch[0]);
+    }
+
+    // Smart Category Match
+    let categoryMatch = smartMatchCategory(lower, CATEGORY_KEYWORDS) || categories[0].id;
+
+    // Explicit Category Search (Fallback)
+    for (const cat of categories) {
+      if (lower.includes(cat.label.toLowerCase()) || lower.includes(cat.id)) {
+        categoryMatch = cat.id;
+        break;
+      }
+    }
+
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
     let note = text.trim();
     if (note.length > 0) {
       note = note.charAt(0).toUpperCase() + note.slice(1);
@@ -1339,9 +1528,13 @@ export default function KharchaApp() {
     setParsedExpense({
       amount: amount || 150,
       category: categoryMatch,
+<<<<<<< HEAD
       note: note,
       type: isIncome ? "income" : "expense",
       walletId: settings.defaultWalletId || "cash",
+=======
+      note: note
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
     });
 
     setVoiceStep(1);
@@ -1352,7 +1545,11 @@ export default function KharchaApp() {
     const SpeechRecognitionAPI = typeof window !== 'undefined' ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) : null;
     
     if (!SpeechRecognitionAPI) {
+<<<<<<< HEAD
       alert("Speech recognition is not supported in this browser. Please use Chrome, Edge, or Safari.");
+=======
+      alert("Speech recognition is not supported in this browser.");
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
       return;
     }
 
@@ -1363,7 +1560,11 @@ export default function KharchaApp() {
 
     try {
       const recognition = new SpeechRecognitionAPI();
+<<<<<<< HEAD
       recognition.lang = 'en-IN'; // Optimized for Indian English & Hinglish
+=======
+      recognition.lang = 'en-US';
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
       recognition.interimResults = true;
       recognition.maxAlternatives = 1;
 
@@ -1397,13 +1598,18 @@ export default function KharchaApp() {
       recognition.start();
     } catch (err) {
       console.error(err);
+<<<<<<< HEAD
       alert("Could not start microphone. Please check browser microphone permissions.");
+=======
+      alert("Could not start microphone. Check permissions.");
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
       setVoiceOpen(false);
     }
   }
 
   function confirmVoice() {
     if (!parsedExpense) return;
+<<<<<<< HEAD
     const isInc = parsedExpense.type === "income";
     const e: Expense = {
       id: generateId(),
@@ -1412,10 +1618,18 @@ export default function KharchaApp() {
       note: parsedExpense.note || "",
       type: isInc ? "income" : "expense",
       walletId: parsedExpense.walletId || settings.defaultWalletId || "cash",
+=======
+    const e: Expense = {
+      id: generateId(),
+      category: parsedExpense.category || "food",
+      amount: parsedExpense.amount || 0,
+      note: parsedExpense.note || "",
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
       createdAt: new Date().toISOString(),
     };
     setExpenses((prev) => [e, ...prev]);
     setVoiceOpen(false);
+<<<<<<< HEAD
     if (settings.haptic) triggerHaptic("success");
     go("dash");
   }
@@ -1527,6 +1741,11 @@ export default function KharchaApp() {
     );
   }
 
+=======
+    go("dash");
+  }
+
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
   // ════════════════════════════════════════════════════════════════════════════
   //  SCREENS
   // ════════════════════════════════════════════════════════════════════════════
@@ -1563,6 +1782,7 @@ export default function KharchaApp() {
             const colors = ["#EF9F27", "#378ADD", "#1D9E75", "#7F77DD", "#D85A30"];
             const colorIdx = user.name.charCodeAt(0) % colors.length;
             const accentColor = colors[colorIdx];
+<<<<<<< HEAD
             const uKeys = getUserStorageKeys(user.id);
             const uSet = loadStorage<Settings>(uKeys.SETTINGS, DEFAULT_SETTINGS);
             const isProtected = Boolean(uSet.pin && uSet.pinCode);
@@ -1579,6 +1799,19 @@ export default function KharchaApp() {
                   cursor: "pointer", transition: "all 0.2s",
                   backdropFilter: "blur(12px)",
                   position: "relative"
+=======
+            return (
+              <button
+                key={user.id}
+                onClick={() => switchUser(user.id)}
+                style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 14,
+                  padding: "24px 16px", borderRadius: 24,
+                  border: `1px solid rgba(255,255,255,0.08)`,
+                  background: "rgba(255,255,255,0.04)",
+                  cursor: "pointer", transition: "all 0.2s",
+                  backdropFilter: "blur(12px)"
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
                 }}
                 onMouseEnter={e => {
                   (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.09)";
@@ -1586,6 +1819,7 @@ export default function KharchaApp() {
                   (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-4px)";
                 }}
                 onMouseLeave={e => {
+<<<<<<< HEAD
                   (e.currentTarget as HTMLButtonElement).style.background = isActive ? `${accentColor}12` : "rgba(255,255,255,0.04)";
                   (e.currentTarget as HTMLButtonElement).style.borderColor = isActive ? accentColor : "rgba(255,255,255,0.08)";
                   (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
@@ -1600,6 +1834,13 @@ export default function KharchaApp() {
                     🔒
                   </div>
                 )}
+=======
+                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)";
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.08)";
+                  (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+                }}
+              >
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
                 {/* Avatar */}
                 <div style={{
                   width: 76, height: 76, borderRadius: "50%", overflow: "hidden",
@@ -1619,9 +1860,13 @@ export default function KharchaApp() {
                   fontSize: 10, color: accentColor, fontWeight: 600, letterSpacing: "0.1em",
                   textTransform: "uppercase", background: `${accentColor}22`,
                   padding: "3px 10px", borderRadius: 20
+<<<<<<< HEAD
                 }}>
                   {isProtected ? "Locked →" : "Login →"}
                 </div>
+=======
+                }}>Login →</div>
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
               </button>
             );
           })}
@@ -1891,6 +2136,53 @@ export default function KharchaApp() {
 
         <BudgetCard total={todayTotal} count={todayExpenses.length} date={dateLabel(todayKey())} />
 
+<<<<<<< HEAD
+=======
+        {/* Voice overlay */}
+        {voiceOpen && (
+          <div style={S.voiceBox}>
+            <div style={S.label}>{voiceStep === 0 ? "Listening to your expense" : "Parsed Expense"}</div>
+            
+            {voiceStep === 0 && (
+              <div style={{ fontSize: 16, color: TOKEN.text, textAlign: "center", fontStyle: "italic", minHeight: 40, marginTop: 10 }}>
+                "{transcript}"
+              </div>
+            )}
+
+            <div
+              style={{ 
+                ...S.voiceRing, 
+                background: isListening ? TOKEN.surfaceElevated : TOKEN.surface,
+                animation: isListening ? "pulseSuccess 1.5s infinite" : "none"
+              }}
+            >
+              <span style={{ fontSize: 28 }}>🎙️</span>
+            </div>
+            
+            <div style={{ fontSize: 12, color: TOKEN.amber }}>
+              {isListening ? "Speak now..." : voiceStep === 0 ? "Processing..." : "Done — tap Confirm"}
+            </div>
+
+            {voiceStep === 1 && parsedExpense && (
+              <>
+                <div style={S.voiceResult}>
+                  <div style={S.label}>Detected</div>
+                  <div style={{ color: TOKEN.amber, fontSize: 15, fontWeight: 500 }}>
+                    ₹{parsedExpense.amount} — {categories.find(c => c.id === parsedExpense.category)?.label || parsedExpense.category}
+                  </div>
+                  <div style={{ color: TOKEN.textFaint, fontSize: 12, marginTop: 2 }}>"{parsedExpense.note}"</div>
+                </div>
+                <button onClick={confirmVoice} style={S.confirmBtn}>Confirm &amp; Save</button>
+              </>
+            )}
+            <button onClick={() => { setVoiceOpen(false); setIsListening(false); }}
+              style={{ background: "none", border: "none", color: TOKEN.muted, cursor: "pointer", fontSize: 12 }}>
+              Cancel
+            </button>
+          </div>
+        )}
+
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
         {/* Expense/Income Toggle in Category Screen */}
         <div style={{ ...S.tabRow, marginBottom: 12, marginTop: 8 }}>
           {(["expense", "income"] as const).map((t) => (
@@ -1944,7 +2236,11 @@ export default function KharchaApp() {
                   <div style={{ ...S.picon, background: cat.bg }}>
                     <CatIcon id={cat.icon} size={18} color={cat.color} />
                   </div>
+<<<<<<< HEAD
                   <div style={{ color: TOKEN.text, fontSize: 14, fontWeight: 600 }}>{cat.label}</div>
+=======
+                  <div style={{ color: "#E0DEDB", fontSize: 14, fontWeight: 500 }}>{cat.label}</div>
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
                   {total > 0 && <div style={{ color: TOKEN.muted, fontSize: 10 }}>{fmt(total)} this month</div>}
                 </button>
               );
@@ -2132,6 +2428,7 @@ export default function KharchaApp() {
         </div>
 
         {/* Amount Display */}
+<<<<<<< HEAD
         <div
           style={{
             ...S.card,
@@ -2199,6 +2496,28 @@ export default function KharchaApp() {
               <span style={{ fontSize: 30, opacity: 0.8, fontWeight: 500 }}>{settings.currency || "₹"}</span>
               <span>{amtVal.toLocaleString("en-IN")}</span>
               {showKeypad && <span style={{ animation: "pulse 1s infinite", borderLeft: `3px solid ${txType === "income" ? TOKEN.success : TOKEN.amber}`, marginLeft: 2, height: "1em", display: "inline-block" }} />}
+=======
+        <div style={{
+          ...S.card,
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 10,
+          border: showKeypad ? `1px solid ${TOKEN.amber}` : S.card.border,
+          cursor: "pointer"
+        }} onClick={() => setShowKeypad(true)}>
+          <div style={{ color: TOKEN.muted, fontSize: 12 }}>{showKeypad ? "Typing amount..." : "Tap to edit amount"}</div>
+          <div style={{ textAlign: "center" }}>
+            <div style={{
+              fontSize: 52,
+              fontWeight: 600,
+              color: showKeypad ? (txType === "income" ? TOKEN.success : TOKEN.amber) : TOKEN.text,
+              fontFamily: TOKEN.mono,
+              letterSpacing: "-2px"
+            }}>
+              ₹{amtVal.toLocaleString("en-IN")}
+              {showKeypad && <span style={{ animation: "pulse 1s infinite", borderLeft: `3px solid ${TOKEN.amber}`, marginLeft: 4 }}>&nbsp;</span>}
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
             </div>
           </div>
         </div>
@@ -2225,6 +2544,7 @@ export default function KharchaApp() {
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
               {[100, 200, 500, 1000].map(v => (
+<<<<<<< HEAD
                 <button
                   key={v}
                   onClick={() => { if (settings.haptic) triggerHaptic("medium"); setAmtVal(v); setAmtInput(v.toString()); }}
@@ -2241,6 +2561,9 @@ export default function KharchaApp() {
                 >
                   {settings.currency || "₹"}{v}
                 </button>
+=======
+                <button key={v} onClick={() => { if (settings.haptic) triggerHaptic("medium"); setAmtVal(v); setAmtInput(v.toString()); }} style={S.fineBtn}>₹{v}</button>
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
               ))}
             </div>
           </div>
@@ -2273,6 +2596,7 @@ export default function KharchaApp() {
     const income = filterByPeriod(expenses, period).filter(e => e.type === "income");
     const incomeTotal = income.reduce((s, e) => s + e.amount, 0);
 
+<<<<<<< HEAD
     const cur = settings.currency || "₹";
     const now = new Date();
     const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -2331,11 +2655,43 @@ export default function KharchaApp() {
             }}>
               <span>↗</span>
               <span>+{fmt(incomeTotal, settings.currency || "₹")} income</span>
+=======
+    const balanceCard = (
+      <div style={S.heroCard as any}>
+        {/* Decorative glow orb */}
+        <div style={{
+          position: "absolute", top: -30, right: -20,
+          width: 120, height: 120, borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(239,159,39,0.2) 0%, transparent 70%)",
+          pointerEvents: "none",
+        }} />
+        <div style={{ color: TOKEN.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em" }}>Total {periodLabel}</div>
+        <div style={{
+          fontSize: 44, fontWeight: 800, color: TOKEN.text,
+          fontFamily: TOKEN.mono, letterSpacing: "-2px", lineHeight: 1.1,
+        }}>
+          {fmt(periodTotal, settings.currency || "₹")}
+        </div>
+        <div style={{ fontSize: 12, color: TOKEN.muted }}>{subText}</div>
+        {incomeTotal > 0 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+            <div style={{
+              padding: "3px 10px", borderRadius: 20,
+              background: "rgba(29,158,117,0.14)",
+              border: "1px solid rgba(29,158,117,0.25)",
+              color: TOKEN.success, fontSize: 11, fontWeight: 600,
+            }}>
+              +{fmt(incomeTotal, settings.currency || "₹")} income
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
             </div>
           </div>
         )}
         {/* Week sparkline */}
+<<<<<<< HEAD
         <div style={{ marginTop: 10, paddingTop: 6, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+=======
+        <div style={{ marginTop: 8 }}>
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
           <BarChart data={barData} currency={settings.currency || "₹"} />
         </div>
       </div>
@@ -2343,6 +2699,7 @@ export default function KharchaApp() {
 
     const budgetAlert = !budgetAlertDismissed && todayTotal > settings.dailyBudget && (
       <div style={{
+<<<<<<< HEAD
         padding: "14px 18px",
         background: `linear-gradient(135deg, rgba(239,68,68,0.12) 0%, rgba(226,75,74,0.05) 100%)`,
         borderRadius: 18,
@@ -2356,6 +2713,20 @@ export default function KharchaApp() {
         <div style={{ flex: 1 }}>
           <div style={{ color: TOKEN.danger, fontSize: 13, fontWeight: 700 }}>Daily budget exceeded!</div>
           <div style={{ color: TOKEN.textFaint, fontSize: 11, marginTop: 2 }}>
+=======
+        padding: "12px 16px",
+        background: `rgba(226,75,74,0.08)`,
+        borderRadius: 16,
+        border: `1px solid rgba(226,75,74,0.25)`,
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+      }}>
+        <span style={{ fontSize: 20 }}>⚠️</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ color: TOKEN.danger, fontSize: 13, fontWeight: 600 }}>Daily budget exceeded!</div>
+          <div style={{ color: TOKEN.muted, fontSize: 11 }}>
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
             Spent {fmt(todayTotal, settings.currency || "₹")} of {fmt(settings.dailyBudget, settings.currency || "₹")} today
           </div>
         </div>
@@ -2367,6 +2738,7 @@ export default function KharchaApp() {
       <button
         onClick={() => go("budget_goals")}
         style={{
+<<<<<<< HEAD
           ...S.card, flexDirection: "row", alignItems: "center", gap: 14, cursor: "pointer",
           border: `1px solid rgba(239,159,39,0.22)`,
           background: "linear-gradient(135deg, rgba(239,159,39,0.08) 0%, rgba(24,24,36,0.6) 100%)",
@@ -2380,16 +2752,35 @@ export default function KharchaApp() {
         }}>🎯</div>
         <div style={{ flex: 1, textAlign: "left" }}>
           <div style={{ color: TOKEN.text, fontSize: 13, fontWeight: 600 }}>Budget Goals</div>
+=======
+          ...S.card, flexDirection: "row", alignItems: "center", gap: 12, cursor: "pointer",
+          border: `1px solid rgba(239,159,39,0.2)`,
+          background: "rgba(239,159,39,0.04)",
+        } as any}
+      >
+        <div style={{
+          width: 36, height: 36, borderRadius: 10,
+          background: "rgba(239,159,39,0.12)",
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
+        }}>🎯</div>
+        <div style={{ flex: 1, textAlign: "left" }}>
+          <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 600 }}>Budget Goals</div>
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
           <div style={{ color: TOKEN.muted, fontSize: 11 }}>
             {budgetGoals.filter(g => categoryTotal(expenses, g.categoryId) >= g.limit).length} categor{budgetGoals.filter(g => categoryTotal(expenses, g.categoryId) >= g.limit).length !== 1 ? "ies" : "y"} at limit
           </div>
         </div>
+<<<<<<< HEAD
         <span style={{ color: TOKEN.amber, fontSize: 18, fontWeight: 700 }}>›</span>
+=======
+        <span style={{ color: TOKEN.amber, fontSize: 18 }}>›</span>
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
       </button>
     );
 
     const walletsOverview = (
       <div>
+<<<<<<< HEAD
         <div style={{ ...S.row, marginBottom: 12 }}>
           <div style={{ color: TOKEN.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700 }}>Accounts</div>
           <button onClick={() => go("manage_wallets")} style={{ background: "none", border: "none", color: TOKEN.amber, fontSize: 11, fontWeight: 600, cursor: "pointer" }}>Manage →</button>
@@ -2433,6 +2824,30 @@ export default function KharchaApp() {
                 <div style={{
                   fontSize: 19, fontWeight: 700, color: balance < 0 ? TOKEN.danger : TOKEN.text,
                   fontFamily: TOKEN.mono, letterSpacing: "-0.5px", marginTop: 8,
+=======
+        <div style={{ ...S.row, marginBottom: 10 }}>
+          <div style={{ color: TOKEN.muted, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>Accounts</div>
+          <button onClick={() => go("manage_wallets")} style={{ background: "none", border: "none", color: TOKEN.amber, fontSize: 11, cursor: "pointer" }}>Manage</button>
+        </div>
+        <div style={{ ...S.walletGrid, display: "grid", gridTemplateColumns: isDesktop ? "repeat(auto-fill, minmax(150px, 1fr))" : "repeat(2, minmax(0, 1fr))", gap: 10 }}>
+          {wallets.map(w => {
+            const balance = sumWalletBalance(expenses, w.id, w.initialBalance);
+            return (
+              <div key={w.id} style={{
+                ...S.walletCard,
+                background: `linear-gradient(135deg, ${TOKEN.surface} 0%, ${TOKEN.surfaceElevated} 100%)`,
+                borderRadius: 16,
+                padding: 14,
+                transition: "transform 0.2s, box-shadow 0.2s",
+              }} className="wallet-card">
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <span style={{ fontSize: 22 }}>{w.icon}</span>
+                  <div style={{ ...S.walletTag as any, background: TOKEN.surfaceHighlight }}>{w.label}</div>
+                </div>
+                <div style={{
+                  fontSize: 18, fontWeight: 700, color: balance < 0 ? TOKEN.danger : TOKEN.text,
+                  fontFamily: TOKEN.mono, letterSpacing: "-0.5px", marginTop: 4,
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
                 }}>
                   {balance < 0 ? "-" : ""}{fmt(Math.abs(balance))}
                 </div>
@@ -2487,6 +2902,7 @@ export default function KharchaApp() {
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 600 }}>Recent</div>
+<<<<<<< HEAD
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <button
               onClick={() => {
@@ -2513,6 +2929,13 @@ export default function KharchaApp() {
               See all →
             </button>
           </div>
+=======
+          <button onClick={() => go("hist")} style={{
+            background: "rgba(239,159,39,0.1)", border: "none",
+            color: TOKEN.amber, fontSize: 11, fontWeight: 600,
+            padding: "4px 10px", borderRadius: 20, cursor: "pointer",
+          }}>See all →</button>
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -2534,6 +2957,7 @@ export default function KharchaApp() {
     );
 
     const fab = (
+<<<<<<< HEAD
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 10, padding: "8px 0 4px" }}>
         <button onClick={() => go("cat")} style={{ ...S.fab, flex: 1, maxWidth: 220 }} className="fab-btn">
           <PlusIcon color={TOKEN.amberText} />
@@ -2618,6 +3042,35 @@ export default function KharchaApp() {
             <div style={{ color: TOKEN.textSub, fontSize: 12, fontWeight: 700 }}>Transaction Registry</div>
             <div style={{ color: TOKEN.muted, fontSize: 10 }}>Search & audit ledger</div>
           </div>
+=======
+      <div style={{ display: "flex", justifyContent: "center", padding: "8px 0 4px" }}>
+        <button onClick={() => go("cat")} style={S.fab} className="fab-btn">
+          <PlusIcon color={TOKEN.amberText} />
+          <span style={{ color: TOKEN.amberText, fontSize: 14, fontWeight: 700, letterSpacing: "0.02em" }}>Add Expense</span>
+        </button>
+      </div>
+    );
+
+    const monthlyBreakdownLink = (
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingBottom: 8 }}>
+        <button
+          onClick={() => go("monthly_breakdown")}
+          style={{
+            ...S.card, flexDirection: "row", alignItems: "center",
+            gap: 12, cursor: "pointer",
+          } as any}
+        >
+          <div style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: "rgba(99,102,241,0.12)",
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
+          }}>📅</div>
+          <div style={{ flex: 1, textAlign: "left" }}>
+            <div style={{ color: TOKEN.textSub, fontSize: 13, fontWeight: 600 }}>Monthly Breakdown</div>
+            <div style={{ color: TOKEN.muted, fontSize: 11 }}>Day-by-day spending</div>
+          </div>
+          <span style={{ color: TOKEN.amber, fontSize: 18 }}>›</span>
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
         </button>
       </div>
     );
@@ -2640,6 +3093,7 @@ export default function KharchaApp() {
         </div>
 
         {/* Period Tabs */}
+<<<<<<< HEAD
         <div style={{
           ...S.tabRow,
           padding: 4,
@@ -3044,6 +3498,45 @@ export default function KharchaApp() {
                 {budgetGoalsLink}
                 {auditAndLedgerLinks}
               </div>
+=======
+        <div style={{ ...S.tabRow, padding: 4, borderRadius: 14 }}>
+          {(["today", "week", "month"] as PeriodName[]).map((p) => (
+            <button
+              key={p}
+              onClick={() => setPeriod(p)}
+              className="period-btn"
+              style={{
+                flex: 1, padding: "8px 4px", borderRadius: 10, border: "none", cursor: "pointer",
+                background: period === p ? TOKEN.amber : "transparent",
+                color: period === p ? TOKEN.amberText : TOKEN.muted,
+                fontWeight: period === p ? 700 : 400,
+                fontSize: 12,
+                transition: "all 0.2s",
+                letterSpacing: "0.02em",
+              }}
+            >
+              {p.charAt(0).toUpperCase() + p.slice(1)}
+            </button>
+          ))}
+        </div>
+
+        {isDesktop ? (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start", marginTop: 8 }}>
+            {/* Left Column */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {balanceCard}
+              {budgetAlert}
+              {walletsOverview}
+            </div>
+            {/* Right Column */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {categoryBreakdown}
+              {recentTransactions}
+              {securitySetup}
+              {budgetGoalsLink}
+              {monthlyBreakdownLink}
+              {fab}
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
             </div>
           </div>
         ) : (
@@ -3057,7 +3550,11 @@ export default function KharchaApp() {
             {categoryBreakdown}
             {recentTransactions}
             {fab}
+<<<<<<< HEAD
             {auditAndLedgerLinks}
+=======
+            {monthlyBreakdownLink}
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
           </>
         )}
       </div>
@@ -3072,6 +3569,7 @@ export default function KharchaApp() {
         <div style={S.row}>
           <button onClick={() => go("dash")} style={S.iconBtn} aria-label="Back">←</button>
           <div style={S.heading}>History</div>
+<<<<<<< HEAD
           <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
             <button
               onClick={() => {
@@ -3110,6 +3608,24 @@ export default function KharchaApp() {
               });
             }} style={S.iconBtn} title="Export Excel">📊</button>
           </div>
+=======
+          <button onClick={() => {
+            // Quick Excel export from history
+            import("xlsx").then(XLSX => {
+              const data = filteredExpenses.map(e => ({
+                Date: e.createdAt.slice(0, 10),
+                Type: e.type || "expense",
+                Category: categories.find(c => c.id === e.category)?.label || e.category,
+                Amount: e.amount,
+                Note: e.note,
+              }));
+              const ws = XLSX.utils.json_to_sheet(data);
+              const wb = XLSX.utils.book_new();
+              XLSX.utils.book_append_sheet(wb, ws, "Expenses");
+              XLSX.writeFile(wb, `Kharcha_${new Date().toISOString().slice(0,10)}.xlsx`);
+            });
+          }} style={S.iconBtn} title="Export Excel">📊</button>
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
         </div>
 
         {/* Search */}
@@ -3119,6 +3635,7 @@ export default function KharchaApp() {
             type="text"
             value={histSearch}
             onChange={(e) => setHistSearch(e.target.value)}
+<<<<<<< HEAD
             placeholder="Search expenses by note or category…"
             style={S.noteInput}
           />
@@ -3160,6 +3677,11 @@ export default function KharchaApp() {
               <option value="amount_asc">💰 Amount (Low → High)</option>
             </select>
           </div>
+=======
+            placeholder="Search expenses…"
+            style={S.noteInput}
+          />
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
         </div>
 
         {/* Category filter chips */}
@@ -3170,16 +3692,24 @@ export default function KharchaApp() {
             return (
               <button
                 key={f}
+<<<<<<< HEAD
                 onClick={() => {
                   if (settings.haptic) triggerHaptic("light");
                   setHistCat(f);
                 }}
+=======
+                onClick={() => setHistCat(f)}
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
                 style={{
                   whiteSpace: "nowrap", padding: "5px 12px", borderRadius: 20,
                   fontSize: 11, cursor: "pointer",
                   border: `0.5px solid ${active ? TOKEN.amber : TOKEN.borderSub}`,
                   background: active ? TOKEN.surfaceElevated : "transparent",
+<<<<<<< HEAD
                   color: active ? TOKEN.amber : TOKEN.muted,
+=======
+                  color: active ? TOKEN.amber : "#666",
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
                 }}
               >
                 {cat ? `${cat.icon} ${cat.label}` : "All"}
@@ -3188,6 +3718,7 @@ export default function KharchaApp() {
           })}
         </div>
 
+<<<<<<< HEAD
         {/* Summary indicator */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 11, color: TOKEN.muted, padding: "0 2px" }}>
           <span>{sortedExpenses.length} transaction{sortedExpenses.length === 1 ? "" : "s"}</span>
@@ -3211,6 +3742,12 @@ export default function KharchaApp() {
                 </div>
               </div>
             ))}
+=======
+        {/* Grouped list */}
+        {historyDates.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "24px 0", color: TOKEN.muted, fontSize: 13 }}>
+            No expenses found
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
           </div>
         ) : (
           historyDates.map((date) => (
@@ -3230,6 +3767,7 @@ export default function KharchaApp() {
     );
   }
 
+<<<<<<< HEAD
   const handleExportEnterpriseBackup = async () => {
     try {
       if (settings.haptic) triggerHaptic("medium");
@@ -3265,6 +3803,8 @@ export default function KharchaApp() {
     }
   };
 
+=======
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
   // ────────────────────────────────────────────────────────────────────────────
   function renderSet() {
     const allTimeTotal = sumExpenses(expenses);
@@ -3349,6 +3889,7 @@ export default function KharchaApp() {
           <span style={{ color: TOKEN.muted }}>›</span>
         </button>
 
+<<<<<<< HEAD
         <SectionLabel>Appearance & Theme</SectionLabel>
         <div style={{ padding: "0 20px 14px", borderBottom: `0.5px solid ${TOKEN.borderSub}` }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -3473,6 +4014,21 @@ export default function KharchaApp() {
             ⚡ Auto-detect based on screen width
           </button>
         </div>
+=======
+        <SectionLabel>Appearance</SectionLabel>
+        <TogRow 
+          label="Light Theme" 
+          sub="Use a bright, high-contrast palette" 
+          val={settings.theme === "light"} 
+          onChange={(v) => updateSetting("theme", v ? "light" : "dark")} 
+        />
+        <TogRow 
+          label="Desktop Layout" 
+          sub="Use full screen width on large displays" 
+          val={isDesktop} 
+          onChange={(v) => updateSetting("layoutMode", v ? "desktop" : "mobile")} 
+        />
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
 
         {/* Accent Color Picker */}
         <div style={{ padding: "12px 20px", borderBottom: `0.5px solid ${TOKEN.borderSub}` }}>
@@ -3620,6 +4176,7 @@ export default function KharchaApp() {
         <SectionLabel>Data</SectionLabel>
         <div style={{ padding: "0 20px 20px", display: "flex", flexDirection: "column", gap: 8 }}>
           <button
+<<<<<<< HEAD
             onClick={() => {
               if (settings.haptic) triggerHaptic("light");
               go("registry");
@@ -3650,6 +4207,8 @@ export default function KharchaApp() {
           </button>
 
           <button
+=======
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
             onClick={() => go("subscriptions")}
             className="settings-item card"
             style={{ ...S.card, flexDirection: "row", justifyContent: "space-between", alignItems: "center", cursor: "pointer", border: `1px solid ${TOKEN.amber}` }}
@@ -3658,6 +4217,7 @@ export default function KharchaApp() {
             <span style={{ color: TOKEN.amber }}>➜</span>
           </button>
 
+<<<<<<< HEAD
           {/* Enterprise Database Section */}
           <div style={{
             ...S.card,
@@ -3776,6 +4336,8 @@ export default function KharchaApp() {
             </button>
           </div>
 
+=======
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
           {/* CSV Import */}
           <input
             ref={csvInputRef}
@@ -3803,6 +4365,7 @@ export default function KharchaApp() {
             <span style={{ color: TOKEN.amber, fontSize: 22, fontWeight: 600, fontFamily: TOKEN.mono }}>{expenses.length}</span>
           </div>
           <button
+<<<<<<< HEAD
             onClick={() => {
               if (window.confirm("Clear all expense data? This cannot be undone.")) {
                 setExpenses([]);
@@ -3811,6 +4374,9 @@ export default function KharchaApp() {
                 }
               }
             }}
+=======
+            onClick={() => { if (window.confirm("Clear all expense data? This cannot be undone.")) setExpenses([]); }}
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
             style={S.dangerBtn}
           >
             Clear all data
@@ -3847,7 +4413,15 @@ export default function KharchaApp() {
               if (pinInput.length === 4) {
                 updateSetting("pinCode", pinInput);
                 setPinInput("");
+<<<<<<< HEAD
                 go("set");
+=======
+                if (settings.biometric) {
+                  go("registry"); // Offer to register fingerprint after PIN setup
+                } else {
+                  go("set");
+                }
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
               }
             }} style={{ ...S.keyBtn, color: TOKEN.success, fontSize: 16 } as any}>SAVE</button>
           </div>
@@ -3857,6 +4431,7 @@ export default function KharchaApp() {
   }
 
   function renderRegistry() {
+<<<<<<< HEAD
     const cur = settings.currency || "₹";
 
     // ── Filtering Logic ──
@@ -4446,6 +5021,39 @@ export default function KharchaApp() {
               })}
             </div>
           )}
+=======
+    return (
+      <div style={S.screenBase} className="screen-enter form-screen">
+        <div style={{ ...S.row, padding: "20px 20px 12px" }}>
+          <button onClick={() => go("set")} style={S.iconBtn} aria-label="Back">←</button>
+          <div style={S.heading}>Security Registry</div>
+          <div style={{ width: 34 }} />
+        </div>
+        
+        <div style={{ padding: 24, textAlign: "center", display: "flex", flexDirection: "column", gap: 30, flex: 1, justifyContent: "center" }}>
+          <div style={{ ...S.biometricRing, width: 120, height: 120, margin: "0 auto", animation: "pulseSuccess 2s infinite" }}>
+            <FingerprintIcon size={50} color={TOKEN.amber} />
+          </div>
+          
+          <div>
+            <div style={{ fontSize: 20, fontWeight: 600, color: TOKEN.text, marginBottom: 8 }}>Register Fingerprint</div>
+            <div style={{ color: TOKEN.muted, fontSize: 14, lineHeight: 1.5 }}>
+              Link your device's biometric data to Kharcha for faster, more secure access to your finances.
+            </div>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <button onClick={async () => {
+              const success = await registerBiometrics();
+              if (success) go("set");
+            }} style={S.primaryBtn}>
+              Start Registration
+            </button>
+            <button onClick={() => go("set")} style={{ background: "none", border: "none", color: TOKEN.muted, fontSize: 13, cursor: "pointer" }}>
+              Skip for now
+            </button>
+          </div>
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
         </div>
       </div>
     );
@@ -4568,6 +5176,7 @@ export default function KharchaApp() {
   function renderMonthlyBreakdown() {
     const cur = settings.currency || "₹";
     const now = new Date();
+<<<<<<< HEAD
     const year = breakdownDate.getFullYear();
     const month = breakdownDate.getMonth();
     const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
@@ -5183,6 +5792,107 @@ export default function KharchaApp() {
               )}
             </div>
           )}
+=======
+    const monthName = now.toLocaleString("default", { month: "long", year: "numeric" });
+    const dayData = getDayByDayMonthly(expenses);
+    const totalThisMonth = dayData.reduce((s, d) => s + d.total, 0);
+    const daysInMonth = dayData.length;
+    const currentDay = now.getDate();
+    const avgPerDay = currentDay > 0 ? totalThisMonth / currentDay : 0;
+    const remaining = settings.monthlyBudget - totalThisMonth;
+    const dailyRemaining = remaining > 0 && currentDay < daysInMonth
+      ? remaining / (daysInMonth - currentDay)
+      : 0;
+    const sparkData = dayData.map(d => d.total);
+    const peakDay = dayData.reduce((best, d) => d.total > best.total ? d : best, { day: 0, total: 0 });
+
+    return (
+      <div style={S.screenBase} className="screen-enter">
+        <div style={{ ...S.row, padding: "20px 20px 12px", borderBottom: `0.5px solid ${TOKEN.border}` }}>
+          <button onClick={() => go("dash")} style={S.iconBtn} aria-label="Back"><ArrowLeftIcon color={TOKEN.dim} /></button>
+          <div style={S.heading}>{monthName}</div>
+          <div style={{ width: 34 }} />
+        </div>
+
+        <div style={{ flex: 1, overflowY: "auto", padding: "12px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
+
+          {/* Summary stats */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            {[
+              { label: "Spent", value: fmt(totalThisMonth, cur), color: TOKEN.amber },
+              { label: "Budget left", value: remaining >= 0 ? fmt(remaining, cur) : `-${fmt(-remaining, cur)}`, color: remaining >= 0 ? TOKEN.success : TOKEN.danger },
+              { label: "Avg / day", value: fmt(avgPerDay, cur), color: TOKEN.text },
+              { label: "Safe daily", value: dailyRemaining > 0 ? fmt(dailyRemaining, cur) : "—", color: TOKEN.text },
+            ].map(s => (
+              <div key={s.label} style={{ ...S.card, padding: 14 }} className="card">
+                <div style={{ color: TOKEN.muted, fontSize: 10, marginBottom: 4 }}>{s.label}</div>
+                <div style={{ color: s.color, fontSize: 16, fontWeight: 700, fontFamily: TOKEN.mono }}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Sparkline */}
+          <div style={{ ...S.card, gap: 12 }} className="card">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: TOKEN.textSub }}>Daily Spending</div>
+              {peakDay.total > 0 && (
+                <div style={{ fontSize: 11, color: TOKEN.muted }}>Peak: Day {peakDay.day} ({fmt(peakDay.total, cur)})</div>
+              )}
+            </div>
+            <SparkLine data={sparkData} height={64} color={TOKEN.amber} />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: TOKEN.muted }}>
+              <span>1</span>
+              <span>{Math.floor(daysInMonth / 2)}</span>
+              <span>{daysInMonth}</span>
+            </div>
+          </div>
+
+          {/* Budget progress */}
+          <div style={{ ...S.card, gap: 10 }} className="card">
+            <div style={{ fontSize: 13, fontWeight: 600, color: TOKEN.textSub }}>Monthly Budget</div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: TOKEN.muted }}>
+              <span>{fmt(totalThisMonth, cur)} spent</span>
+              <span>{fmt(settings.monthlyBudget, cur)} budget</span>
+            </div>
+            <div style={{ height: 8, background: TOKEN.surfaceHighlight, borderRadius: 4, overflow: "hidden" }}>
+              <div style={{
+                height: "100%",
+                width: `${Math.min(100, (totalThisMonth / settings.monthlyBudget) * 100)}%`,
+                background: totalThisMonth > settings.monthlyBudget ? TOKEN.danger : TOKEN.amber,
+                borderRadius: 4,
+                transition: "width 0.5s ease-out"
+              }} />
+            </div>
+            <div style={{ fontSize: 11, color: TOKEN.muted }}>
+              {currentDay} of {daysInMonth} days elapsed ({Math.round((currentDay / daysInMonth) * 100)}% of month)
+            </div>
+          </div>
+
+          {/* Day-by-day list (non-zero days only) */}
+          <div style={{ ...S.card, gap: 8 }} className="card">
+            <div style={{ fontSize: 13, fontWeight: 600, color: TOKEN.textSub, marginBottom: 4 }}>Day-by-Day</div>
+            {dayData.filter(d => d.total > 0).length === 0 ? (
+              <div style={{ color: TOKEN.muted, fontSize: 13, textAlign: "center", padding: "16px 0" }}>No expenses this month yet.</div>
+            ) : (
+              dayData.filter(d => d.total > 0).map(d => {
+                const pct = Math.min(100, (d.total / (peakDay.total || 1)) * 100);
+                return (
+                  <div key={d.day} style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <div style={{ width: 28, textAlign: "right", color: TOKEN.muted, fontSize: 11, flexShrink: 0 }}>
+                      {d.day}
+                    </div>
+                    <div style={{ flex: 1, height: 6, background: TOKEN.surfaceHighlight, borderRadius: 3, overflow: "hidden" }}>
+                      <div style={{ width: `${pct}%`, height: "100%", background: TOKEN.amber, borderRadius: 3, transition: "width 0.4s" }} />
+                    </div>
+                    <div style={{ width: 72, textAlign: "right", color: TOKEN.text, fontSize: 12, fontFamily: TOKEN.mono, flexShrink: 0 }}>
+                      {fmt(d.total, cur)}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
         </div>
       </div>
     );
@@ -5509,6 +6219,7 @@ export default function KharchaApp() {
     );
   }
 
+<<<<<<< HEAD
   function renderAuditLogs() {
     return (
       <div style={S.screenBase} className="screen-enter form-screen">
@@ -5626,6 +6337,14 @@ export default function KharchaApp() {
       { screen: "manage_wallets", icon: "💼", label: "Accounts & Wallets" },
       { screen: "set", icon: "⚙️", label: "Settings" },
       { screen: "audit_logs", icon: "🛡️", label: "Audit Ledger & DB" },
+=======
+  function Sidebar() {
+    const tabs: { screen: ScreenName; icon: string; label: string }[] = [
+      { screen: "dash", icon: "📊", label: "Dashboard" },
+      { screen: "reports", icon: "📈", label: "Reports" },
+      { screen: "hist", icon: "🕒", label: "History" },
+      { screen: "set", icon: "⚙️", label: "Settings" },
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
     ];
 
     return (
@@ -5633,8 +6352,13 @@ export default function KharchaApp() {
         {/* Brand Logo Section */}
         <div style={{
           display: "flex", alignItems: "center", gap: 12,
+<<<<<<< HEAD
           paddingBottom: 20,
           borderBottom: `1px solid rgba(255,255,255,0.06)`,
+=======
+          paddingBottom: 24,
+          borderBottom: `1px solid rgba(255,255,255,0.05)`,
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
           marginBottom: 8,
         }}>
           <div style={{
@@ -5648,6 +6372,7 @@ export default function KharchaApp() {
               ? <img src={settings.profileImage} style={{ width: "100%", height: "100%", borderRadius: 12, objectFit: "cover" }} alt="Profile" />
               : "🪙"}
           </div>
+<<<<<<< HEAD
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 800, color: TOKEN.text, fontSize: 16, letterSpacing: "-0.3px" }}>Kharcha</div>
             <div style={{ fontSize: 11, color: TOKEN.muted, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -5668,6 +6393,16 @@ export default function KharchaApp() {
 
         {/* Nav Items */}
         <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1, overflowY: "auto" }}>
+=======
+          <div>
+            <div style={{ fontWeight: 800, color: TOKEN.text, fontSize: 17, letterSpacing: "-0.3px" }}>Kharcha</div>
+            <div style={{ fontSize: 11, color: TOKEN.muted, marginTop: 1 }}>{settings.userName || "User"}</div>
+          </div>
+        </div>
+
+        {/* Nav Items */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: 1 }}>
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
           {tabs.map((t) => {
             const isActive = screen === t.screen;
             return (
@@ -5679,6 +6414,7 @@ export default function KharchaApp() {
                 }}
                 className="sidebar-item"
                 style={{
+<<<<<<< HEAD
                   display: "flex", alignItems: "center", gap: 12,
                   padding: "9px 12px",
                   borderRadius: 12, border: "none", cursor: "pointer",
@@ -5686,16 +6422,34 @@ export default function KharchaApp() {
                   color: isActive ? TOKEN.amber : TOKEN.textSub,
                   fontWeight: isActive ? 700 : 500,
                   fontSize: 13,
+=======
+                  display: "flex", alignItems: "center", gap: 14,
+                  padding: "11px 14px",
+                  borderRadius: 14, border: "none", cursor: "pointer",
+                  background: isActive ? "rgba(239,159,39,0.1)" : "transparent",
+                  color: isActive ? TOKEN.amber : TOKEN.textSub,
+                  fontWeight: isActive ? 700 : 500,
+                  fontSize: 14,
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
                   transition: "all 0.18s",
                   position: "relative",
                   borderLeft: isActive ? `3px solid ${TOKEN.amber}` : "3px solid transparent",
                 }}
               >
+<<<<<<< HEAD
                 <span style={{ fontSize: 16 }}>{t.icon}</span>
                 <span style={{ flex: 1, textAlign: "left" }}>{t.label}</span>
                 {isActive && (
                   <div style={{
                     width: 5, height: 5, borderRadius: "50%",
+=======
+                <span style={{ fontSize: 18 }}>{t.icon}</span>
+                {t.label}
+                {isActive && (
+                  <div style={{
+                    position: "absolute", right: 12,
+                    width: 6, height: 6, borderRadius: "50%",
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
                     background: TOKEN.amber,
                     boxShadow: `0 0 8px ${TOKEN.amber}`,
                   }} />
@@ -5705,6 +6459,7 @@ export default function KharchaApp() {
           })}
         </div>
 
+<<<<<<< HEAD
         {/* Quick Add Buttons */}
         <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
           <button
@@ -5762,6 +6517,28 @@ export default function KharchaApp() {
         {/* Footer */}
         <div style={{ paddingTop: 10, borderTop: `1px solid rgba(255,255,255,0.05)`, marginTop: 6 }}>
           <div style={{ color: TOKEN.dim, fontSize: 10, textAlign: "center", letterSpacing: "0.06em" }}>KHARCHA WINDOWS v2.0</div>
+=======
+        {/* Quick Add Button */}
+        <button
+          onClick={() => { if (settings.haptic) triggerHaptic("medium"); go("cat"); }}
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            padding: "12px", borderRadius: 14, cursor: "pointer",
+            background: `linear-gradient(135deg, rgba(239,159,39,0.2), rgba(239,159,39,0.08))`,
+            border: `1px solid rgba(239,159,39,0.2)`,
+            color: TOKEN.amber, fontWeight: 700, fontSize: 13,
+            transition: "all 0.2s",
+          }}
+          className="sidebar-item"
+        >
+          <PlusIcon size={16} color={TOKEN.amber} />
+          Add Expense
+        </button>
+
+        {/* Footer */}
+        <div style={{ paddingTop: 16, borderTop: `1px solid rgba(255,255,255,0.05)`, marginTop: 8 }}>
+          <div style={{ color: TOKEN.dim, fontSize: 10, textAlign: "center", letterSpacing: "0.06em" }}>KHARCHA v2.0</div>
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
         </div>
       </div>
     );
@@ -5829,6 +6606,7 @@ export default function KharchaApp() {
       className={`app-root theme-${settings.theme || "dark"}`}
     >
       <GlobalStyles />
+<<<<<<< HEAD
       <div style={isDesktop ? (isMaximized ? { ...S.desktopContainer, maxWidth: "100%", height: "100vh", borderRadius: 0 } : S.desktopContainer) : S.phone} className={isDesktop ? "app-desktop" : "app-phone"}>
         {isDesktop && (
           <WindowsTitleBar
@@ -5873,13 +6651,38 @@ export default function KharchaApp() {
             {screen === "monthly_breakdown" && renderMonthlyBreakdown()}
             {screen === "audit_logs" && renderAuditLogs()}
           </div>
+=======
+      <div style={isDesktop ? S.desktopContainer : S.phone} className={isDesktop ? "app-desktop" : "app-phone"}>
+        {!isDesktop && <StatusBar />}
+        {isDesktop && ["dash", "hist", "reports", "set"].includes(screen) && <Sidebar />}
+        <div style={isDesktop ? S.desktopContent : S.body}>
+          {screen === "user_select" && renderUserSelect()}
+          {screen === "lock" && renderLock()}
+          {screen === "cat" && renderCat()}
+          {screen === "amt" && renderAmt()}
+          {screen === "dash" && renderDash()}
+          {screen === "hist" && renderHist()}
+          {screen === "set" && renderSet()}
+          {screen === "change_pin" && renderChangePin()}
+          {screen === "registry" && renderRegistry()}
+          {screen === "manage_cats" && renderManageCats()}
+          {screen === "reports" && renderReports()}
+          {screen === "subscriptions" && renderSubscriptions()}
+          {screen === "manage_wallets" && renderManageWallets()}
+          {screen === "user_manage" && renderUserManage()}
+          {screen === "budget_goals" && renderBudgetGoals()}
+          {screen === "monthly_breakdown" && renderMonthlyBreakdown()}
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
         </div>
         {!isDesktop && ["dash", "hist", "reports", "set"].includes(screen) && <BottomNav />}
         {!isDesktop && <HomeBar />}
       </div>
       {renderCropModal()}
+<<<<<<< HEAD
       {renderSwitchPinModal()}
       {renderVoiceModal()}
+=======
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
     </div>
   );
 }

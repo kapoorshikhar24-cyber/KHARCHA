@@ -426,9 +426,16 @@ export function parseCSVToExpenses(csv: string, existingExpenses: Expense[]): Ex
 
 // ─── Month day-by-day breakdown ───────────────────────────────────────────────
 
+<<<<<<< HEAD
 export function getDayByDayMonthly(expenses: Expense[], targetDate: Date = new Date()) {
   const year = targetDate.getFullYear();
   const month = targetDate.getMonth();
+=======
+export function getDayByDayMonthly(expenses: Expense[]) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const result: { day: number; total: number }[] = [];
 
@@ -442,6 +449,7 @@ export function getDayByDayMonthly(expenses: Expense[], targetDate: Date = new D
   return result;
 }
 
+<<<<<<< HEAD
 // ─── Voice Spoken Number & Scale Converter ───────────────────────────────────
 
 export function extractVoiceAmount(rawText: string): number {
@@ -516,3 +524,5 @@ export function extractVoiceAmount(rawText: string): number {
   return foundAny ? total : 0;
 }
 
+=======
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706

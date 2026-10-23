@@ -36,11 +36,14 @@ yarn-error.log*
 # vercel
 .vercel
 
+<<<<<<< HEAD
 # database
 *.db
 *.db-journal
 *.sqlite
 
+=======
+>>>>>>> dcecaefb7235f17b8f7f68a8b2e5e0cdfd5f8706
 # typescript
 *.tsbuildinfo
 next-env.d.ts
