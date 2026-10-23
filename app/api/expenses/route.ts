@@ -162,6 +162,13 @@ export async function PUT(req: Request) {
     }
 
     const updated = await prisma.$transaction(async (tx) => {
+      const existing = await tx.expense.findFirst({
+        where: { id: expense.id, userId },
+      });
+      if (!existing) {
+        throw new Error("Unauthorized or expense record not found");
+      }
+
       const item = await tx.expense.update({
         where: { id: expense.id },
         data: {
@@ -231,6 +238,13 @@ export async function DELETE(req: Request) {
     }
 
     await prisma.$transaction(async (tx) => {
+      const existing = await tx.expense.findFirst({
+        where: { id, userId },
+      });
+      if (!existing) {
+        throw new Error("Unauthorized or expense record not found");
+      }
+
       await tx.expense.delete({
         where: { id },
       });

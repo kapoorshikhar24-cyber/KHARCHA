@@ -1,4 +1,4 @@
-export type ScreenName = "lock" | "cat" | "amt" | "dash" | "hist" | "set" | "manage_cats" | "change_pin" | "registry" | "reports" | "subscriptions" | "manage_wallets" | "user_select" | "user_manage" | "budget_goals" | "monthly_breakdown" | "audit_logs";
+export type ScreenName = "lock" | "cat" | "amt" | "dash" | "hist" | "set" | "manage_cats" | "change_pin" | "registry" | "reports" | "subscriptions" | "manage_wallets" | "user_select" | "user_manage" | "budget_goals" | "monthly_breakdown" | "audit_logs" | "auth" | "register" | "forgot_password";
 export type PeriodName = "today" | "week" | "month";
 export type RecurrenceFrequency = "daily" | "weekly" | "monthly" | "yearly";
 
@@ -48,7 +48,7 @@ export interface Settings {
   offline: boolean;
   dailyBudget: number;
   monthlyBudget: number;
-  layoutMode?: "mobile" | "desktop" | "windows" | "phone";
+  layoutMode?: "mobile" | "desktop" | "windows" | "phone" | "responsive" | "web";
   userName: string;
   userEmail: string;
   profileImage?: string;
@@ -62,6 +62,8 @@ export interface Settings {
 export interface UserProfile {
   id: string;
   name: string;
+  email?: string;
   avatar?: string; // compressed base64 profile image
   createdAt: string;
+  isEmailVerified?: boolean;
 }

@@ -1,0 +1,18 @@
+{
+  "name": "KHARCHA — Expense Tracker & Financial Intelligence",
+  "short_name": "KHARCHA",
+  "description": "Multi-user expense tracker and financial intelligence system with biometric authentication and voice logging.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#060608",
+  "theme_color": "#EF9F27",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/window.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

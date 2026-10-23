@@ -29,6 +29,8 @@ export interface EnterpriseAuditLog {
  */
 class EnterpriseStorageService {
   private isOnline: boolean = typeof navigator !== "undefined" ? navigator.onLine : true;
+  private syncTimeout: any = null;
+  private pendingSync: { userId: string; data: any } | null = null;
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -212,6 +214,7 @@ class EnterpriseStorageService {
 
   /**
    * Sync complete user dataset (expenses, settings, categories, wallets, budgetGoals) atomically
+   * Debounced by 300ms to coalesce rapid state updates into a single database write.
    */
   async syncUserData(
     userId: string,
@@ -223,24 +226,41 @@ class EnterpriseStorageService {
       budgetGoals: BudgetGoal[];
     }
   ): Promise<boolean> {
-    try {
-      const res = await fetch("/api/sync-user-data", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId,
-          expenses: data.expenses,
-          settings: data.settings,
-          categories: data.categories,
-          wallets: data.wallets,
-          budgetGoals: data.budgetGoals,
-        }),
-      });
-      return res.ok;
-    } catch (err) {
-      console.error("Enterprise DB syncUserData error:", err);
-      return false;
-    }
+    this.pendingSync = { userId, data };
+
+    return new Promise((resolve) => {
+      if (this.syncTimeout) {
+        clearTimeout(this.syncTimeout);
+      }
+
+      this.syncTimeout = setTimeout(async () => {
+        const payload = this.pendingSync;
+        this.pendingSync = null;
+        if (!payload) {
+          resolve(true);
+          return;
+        }
+
+        try {
+          const res = await fetch("/api/sync-user-data", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId: payload.userId,
+              expenses: payload.data.expenses,
+              settings: payload.data.settings,
+              categories: payload.data.categories,
+              wallets: payload.data.wallets,
+              budgetGoals: payload.data.budgetGoals,
+            }),
+          });
+          resolve(res.ok);
+        } catch (err) {
+          console.error("Enterprise DB syncUserData error:", err);
+          resolve(false);
+        }
+      }, 300);
+    });
   }
 
   /**
@@ -322,6 +342,144 @@ class EnterpriseStorageService {
       });
     } catch (err) {
       console.error("Enterprise DB setActiveUser error:", err);
+    }
+  }
+
+  /**
+   * Register a new user account with secure credentials
+   */
+  async registerUser(payload: {
+    name: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+  }): Promise<{ success: boolean; message?: string; user?: any; devVerificationCode?: string; error?: string; details?: string[] }> {
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || "Registration failed", details: data.details };
+      }
+      return { success: true, message: data.message, user: data.user, devVerificationCode: data.devVerificationCode };
+    } catch (err: any) {
+      return { success: false, error: err.message || "Network error during registration" };
+    }
+  }
+
+  /**
+   * Verify email with 6-digit code
+   */
+  async verifyEmail(email: string, code: string): Promise<{ success: boolean; message?: string; user?: any; settings?: any; error?: string }> {
+    try {
+      const res = await fetch("/api/auth/verify-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || "Verification failed" };
+      }
+      return { success: true, message: data.message, user: data.user, settings: data.settings };
+    } catch (err: any) {
+      return { success: false, error: err.message || "Network error during email verification" };
+    }
+  }
+
+  /**
+   * Resend verification code
+   */
+  async resendVerificationCode(email: string): Promise<{ success: boolean; message?: string; devVerificationCode?: string; error?: string }> {
+    try {
+      const res = await fetch("/api/auth/verify-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, resend: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || "Resend failed" };
+      }
+      return { success: true, message: data.message, devVerificationCode: data.devVerificationCode };
+    } catch (err: any) {
+      return { success: false, error: err.message || "Network error" };
+    }
+  }
+
+  /**
+   * Authenticate user with email and password
+   */
+  async loginUser(payload: { email: string; password: string }): Promise<{
+    success: boolean;
+    requiresVerification?: boolean;
+    email?: string;
+    message?: string;
+    user?: any;
+    activeData?: any;
+    error?: string;
+  }> {
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || "Login failed" };
+      }
+      return data;
+    } catch (err: any) {
+      return { success: false, error: err.message || "Network error during login" };
+    }
+  }
+
+  /**
+   * Request password reset code
+   */
+  async forgotPassword(email: string): Promise<{ success: boolean; message?: string; devResetCode?: string; error?: string }> {
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || "Request failed" };
+      }
+      return { success: true, message: data.message, devResetCode: data.devResetCode };
+    } catch (err: any) {
+      return { success: false, error: err.message || "Network error" };
+    }
+  }
+
+  /**
+   * Set new password with reset code
+   */
+  async resetPassword(payload: {
+    email: string;
+    code: string;
+    newPassword: string;
+    confirmPassword: string;
+  }): Promise<{ success: boolean; message?: string; error?: string; details?: string[] }> {
+    try {
+      const res = await fetch("/api/auth/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error || "Reset failed", details: data.details };
+      }
+      return { success: true, message: data.message };
+    } catch (err: any) {
+      return { success: false, error: err.message || "Network error" };
     }
   }
 

@@ -10,10 +10,17 @@ generator client {
 model User {
   id                  String           @id @default(cuid())
   name                String
-  email               String?
+  email               String?          @unique
+  passwordHash        String?
+  passwordSalt        String?
   avatar              String?
   pinCode             String?          @default("1234")
   biometricCredential String?
+  isEmailVerified     Boolean          @default(false)
+  verificationCode    String?
+  verificationExpires DateTime?
+  resetCode           String?
+  resetExpires        DateTime?
   createdAt           DateTime         @default(now())
   updatedAt           DateTime         @updatedAt
 

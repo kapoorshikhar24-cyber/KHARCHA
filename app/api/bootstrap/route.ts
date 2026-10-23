@@ -13,6 +13,7 @@ export async function GET() {
         createdAt: true,
         pinCode: true,
         biometricCredential: true,
+        isEmailVerified: true,
       },
     });
 
@@ -59,7 +60,9 @@ export async function GET() {
       users: users.map((u) => ({
         id: u.id,
         name: u.name,
+        email: u.email || undefined,
         avatar: u.avatar || undefined,
+        isEmailVerified: u.isEmailVerified,
         createdAt: u.createdAt.toISOString(),
       })),
       activeUserId,

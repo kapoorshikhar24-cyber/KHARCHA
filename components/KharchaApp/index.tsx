@@ -75,6 +75,10 @@ import {
   WindowsTitleBar, PhoneTopBar,
 } from "./SubComponents";
 import ReportsScreen from "./ReportsScreen";
+import AuthScreen, { AuthMode } from "./AuthScreen";
+import WebShell from "./web/WebShell";
+import WindowsDesktopShell from "./desktop/WindowsDesktopShell";
+import { PlatformMode } from "./types/Platform";
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 export default function KharchaApp() {
@@ -89,8 +93,21 @@ export default function KharchaApp() {
 
   // ── Core state ──────────────────────────────────────────────────────────────
   const [screen, setScreen] = useState<ScreenName>("user_select");
+  const [authInitialMode, setAuthInitialMode] = useState<AuthMode>("register");
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [platformMode, setPlatformMode] = useState<PlatformMode>("web");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (window.electronAPI) {
+        setPlatformMode("desktop");
+      } else if (settings.layoutMode === "desktop" || settings.layoutMode === "windows") {
+        setPlatformMode("desktop");
+      }
+    }
+  }, [settings.layoutMode]);
+
   const [hasLoaded, setHasLoaded] = useState(false);
   const [dbConnected, setDbConnected] = useState<boolean>(true);
   const [auditLogs, setAuditLogs] = useState<EnterpriseAuditLog[]>([]);
@@ -1083,6 +1100,25 @@ export default function KharchaApp() {
     if (settings.haptic) triggerHaptic("success");
   }, [settings.haptic]);
 
+  const handleAddExpense = useCallback((expenseData: Omit<Expense, "id">) => {
+    const newExp: Expense = {
+      ...expenseData,
+      id: generateId(),
+    };
+    setExpenses(prev => [newExp, ...prev]);
+    if (settings.haptic) triggerHaptic("success");
+  }, [settings.haptic]);
+
+  const handleBulkDeleteExpenses = useCallback((expenseIds: string[]) => {
+    setExpenses(prev => prev.filter(e => !expenseIds.includes(e.id)));
+    if (settings.haptic) triggerHaptic("medium");
+  }, [settings.haptic]);
+
+  const handleUpdateSettings = useCallback((newSettings: Partial<Settings>) => {
+    setSettings(prev => ({ ...prev, ...newSettings }));
+  }, []);
+
+
   const handleQuickAdd = useCallback(() => {
     const val = parseFloat(quickAmt);
     if (!val || isNaN(val) || val <= 0) {
@@ -1531,6 +1567,68 @@ export default function KharchaApp() {
   //  SCREENS
   // ════════════════════════════════════════════════════════════════════════════
 
+  function renderAuth() {
+    return (
+      <AuthScreen
+        initialMode={authInitialMode}
+        isDesktop={isDesktop}
+        onSwitchToProfiles={() => setScreen("user_select")}
+        onSuccess={(result) => {
+          const authUser = result.user;
+          // Update users state if this user wasn't in list yet
+          setUsers((prev) => {
+            const exists = prev.some((u) => u.id === authUser.id);
+            if (!exists) {
+              const updated = [...prev, authUser];
+              saveStorage(STORAGE_KEYS.USERS, updated);
+              return updated;
+            }
+            return prev.map(u => u.id === authUser.id ? { ...u, ...authUser } : u);
+          });
+
+          // Activate this user
+          setActiveUserId(authUser.id);
+          saveStorage(STORAGE_KEYS.ACTIVE_USER, authUser.id);
+          enterpriseStorage.setActiveUser(authUser.id).catch(console.error);
+
+          const activeData = result.activeData;
+          const userKeys = getUserStorageKeys(authUser.id);
+
+          const loadedSettings: Settings = activeData?.settings || {
+            ...DEFAULT_SETTINGS,
+            userName: authUser.name,
+            userEmail: authUser.email || "",
+          };
+          const loadedExpenses: Expense[] = activeData?.expenses || [];
+          const loadedCategories: Category[] = activeData?.categories && activeData.categories.length > 0
+            ? activeData.categories
+            : ALL_CATEGORIES;
+          const loadedWallets: Wallet[] = activeData?.wallets && activeData.wallets.length > 0
+            ? activeData.wallets
+            : WALLETS;
+          const loadedBudgetGoals: BudgetGoal[] = activeData?.budgetGoals || [];
+
+          saveStorage(userKeys.SETTINGS, loadedSettings);
+          saveStorage(userKeys.EXPENSES, loadedExpenses);
+
+          setSettings(loadedSettings);
+          setExpenses(loadedExpenses);
+          setCategories(loadedCategories);
+          setWallets(loadedWallets);
+          setBudgetGoals(loadedBudgetGoals);
+
+          setPinInput("");
+          setLoginSuccess(false);
+          setBioStatus(null);
+
+          // Direct redirect to dashboard
+          setScreen("dash");
+          if (loadedSettings.haptic) triggerHaptic("success");
+        }}
+      />
+    );
+  }
+
   function renderUserSelect() {
     return (
       <div style={{
@@ -1540,7 +1638,7 @@ export default function KharchaApp() {
         justifyContent: "center", padding: "40px 24px", boxSizing: "border-box", gap: 0
       }} className="screen-enter form-screen">
         {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: 48 }}>
+        <div style={{ textAlign: "center", marginBottom: 36 }}>
           <div style={{
             fontSize: 11, color: TOKEN.amber, letterSpacing: "0.25em",
             textTransform: "uppercase", fontWeight: 700, marginBottom: 10
@@ -1548,16 +1646,16 @@ export default function KharchaApp() {
           <div style={{ fontSize: 28, fontWeight: 800, color: "#ffffff", lineHeight: 1.2 }}>
             Who's logging in?
           </div>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginTop: 8 }}>
-            Select your profile to continue
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginTop: 8 }}>
+            Select an existing profile or create your own account
           </div>
         </div>
 
         {/* User grid */}
         <div style={{
           display: "grid",
-          gridTemplateColumns: `repeat(${Math.min(users.length + 1, 3)}, minmax(100px, 140px))`,
-          gap: 20, justifyContent: "center", width: "100%", maxWidth: 480
+          gridTemplateColumns: `repeat(${Math.min(users.length + 1, 3)}, minmax(110px, 140px))`,
+          gap: 18, justifyContent: "center", width: "100%", maxWidth: 480
         }}>
           {users.map((user) => {
             const colors = ["#EF9F27", "#378ADD", "#1D9E75", "#7F77DD", "#D85A30"];
@@ -1572,8 +1670,8 @@ export default function KharchaApp() {
                 key={user.id}
                 onClick={() => requestSwitchUser(user.id)}
                 style={{
-                  display: "flex", flexDirection: "column", alignItems: "center", gap: 14,
-                  padding: "24px 16px", borderRadius: 24,
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
+                  padding: "22px 14px", borderRadius: 22,
                   border: `1px solid ${isActive ? accentColor : "rgba(255,255,255,0.08)"}`,
                   background: isActive ? `${accentColor}12` : "rgba(255,255,255,0.04)",
                   cursor: "pointer", transition: "all 0.2s",
@@ -1602,11 +1700,11 @@ export default function KharchaApp() {
                 )}
                 {/* Avatar */}
                 <div style={{
-                  width: 76, height: 76, borderRadius: "50%", overflow: "hidden",
+                  width: 70, height: 70, borderRadius: "50%", overflow: "hidden",
                   background: `linear-gradient(135deg, ${accentColor}33, ${accentColor}11)`,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   border: `2.5px solid ${accentColor}55`,
-                  fontSize: 30, fontWeight: 700, color: accentColor,
+                  fontSize: 28, fontWeight: 700, color: accentColor,
                   boxShadow: `0 0 24px ${accentColor}22`
                 }}>
                   {user.avatar
@@ -1614,7 +1712,9 @@ export default function KharchaApp() {
                     : user.name.charAt(0).toUpperCase()
                   }
                 </div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#ffffff", textAlign: "center" }}>{user.name}</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: "#ffffff", textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", width: "100%", whiteSpace: "nowrap" }}>
+                  {user.name}
+                </div>
                 <div style={{
                   fontSize: 10, color: accentColor, fontWeight: 600, letterSpacing: "0.1em",
                   textTransform: "uppercase", background: `${accentColor}22`,
@@ -1626,36 +1726,126 @@ export default function KharchaApp() {
             );
           })}
 
-          {/* Add User card */}
+          {/* Add User / Sign Up card */}
           <button
             onClick={() => {
-              const name = window.prompt("Enter new user name:");
-              if (name?.trim()) { createUser(name.trim()); }
+              if (settings.haptic) triggerHaptic("medium");
+              setAuthInitialMode("register");
+              setScreen("auth");
             }}
             style={{
-              display: "flex", flexDirection: "column", alignItems: "center", gap: 14,
-              padding: "24px 16px", borderRadius: 24,
-              border: "1.5px dashed rgba(255,255,255,0.12)",
-              background: "transparent", cursor: "pointer", transition: "all 0.2s"
+              display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
+              padding: "22px 14px", borderRadius: 22,
+              border: "1.5px dashed rgba(239,159,39,0.3)",
+              background: "rgba(239,159,39,0.03)", cursor: "pointer", transition: "all 0.2s"
             }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(239,159,39,0.4)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.12)"; }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(239,159,39,0.7)";
+              (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,159,39,0.08)";
+              (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-4px)";
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(239,159,39,0.3)";
+              (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,159,39,0.03)";
+              (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
+            }}
           >
             <div style={{
-              width: 76, height: 76, borderRadius: "50%",
-              background: "rgba(255,255,255,0.04)",
+              width: 70, height: 70, borderRadius: "50%",
+              background: "rgba(239,159,39,0.1)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 30, color: "rgba(255,255,255,0.25)",
-              border: "1.5px dashed rgba(255,255,255,0.12)"
+              fontSize: 28, color: TOKEN.amber,
+              border: "1.5px dashed rgba(239,159,39,0.4)"
             }}>+</div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.3)" }}>New User</div>
-            <div style={{ fontSize: 10, color: "transparent" }}>–</div>
+            <div style={{ fontSize: 13.5, fontWeight: 700, color: TOKEN.amber }}>Sign Up</div>
+            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>New Account</div>
           </button>
         </div>
 
-        {/* Footer */}
-        <div style={{ marginTop: 48, fontSize: 12, color: "rgba(255,255,255,0.2)", textAlign: "center" }}>
-          Tap your profile to enter your PIN
+        {/* Independent Registration & Login Action Buttons */}
+        <div style={{
+          marginTop: 36,
+          display: "flex",
+          flexDirection: "column",
+          gap: 12,
+          width: "100%",
+          maxWidth: 380,
+        }}>
+          <button
+            onClick={() => {
+              if (settings.haptic) triggerHaptic("medium");
+              setAuthInitialMode("register");
+              setScreen("auth");
+            }}
+            style={{
+              width: "100%",
+              padding: "13px 20px",
+              borderRadius: 14,
+              border: "1px solid rgba(239,159,39,0.4)",
+              background: "linear-gradient(135deg, rgba(239,159,39,0.22), rgba(216,90,48,0.15))",
+              color: TOKEN.amber,
+              fontWeight: 700,
+              fontSize: 13.5,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              boxShadow: "0 4px 16px rgba(239,159,39,0.12)",
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = "linear-gradient(135deg, rgba(239,159,39,0.32), rgba(216,90,48,0.22))";
+              (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.01)";
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = "linear-gradient(135deg, rgba(239,159,39,0.22), rgba(216,90,48,0.15))";
+              (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
+            }}
+          >
+            <span>✨</span>
+            <span>Create New Account (Sign Up)</span>
+          </button>
+
+          <button
+            onClick={() => {
+              if (settings.haptic) triggerHaptic("light");
+              setAuthInitialMode("login");
+              setScreen("auth");
+            }}
+            style={{
+              width: "100%",
+              padding: "11px 20px",
+              borderRadius: 14,
+              border: "1px solid rgba(255,255,255,0.08)",
+              background: "rgba(255,255,255,0.04)",
+              color: "rgba(255,255,255,0.7)",
+              fontWeight: 600,
+              fontSize: 13,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 8,
+              transition: "all 0.2s",
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.08)";
+              (e.currentTarget as HTMLButtonElement).style.color = "#ffffff";
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)";
+              (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.7)";
+            }}
+          >
+            <span>✉️</span>
+            <span>Sign In with Email & Password</span>
+          </button>
+        </div>
+
+        {/* Footer info */}
+        <div style={{ marginTop: 28, fontSize: 11.5, color: "rgba(255,255,255,0.25)", textAlign: "center" }}>
+          New users can register independently • Existing users can unlock via PIN or credentials
         </div>
       </div>
     );
@@ -1721,10 +1911,8 @@ export default function KharchaApp() {
 
   function renderLock() {
     const handleForgot = () => {
-      if (window.confirm("Forgot PIN? This will reset all your app data for security. Proceed?")) {
-        localStorage.clear();
-        window.location.reload();
-      }
+      setAuthInitialMode("forgot");
+      setScreen("auth");
     };
 
     const lastCount = expenses.length;
@@ -1766,23 +1954,42 @@ export default function KharchaApp() {
             <div style={{ fontSize: 18, fontWeight: 700, color: "#ffffff", marginTop: 12 }}>
               {activeUser.name}
             </div>
-            <button
-              onClick={() => {
-                if (settings.haptic) triggerHaptic("medium");
-                setScreen("user_select");
-              }}
-              style={{
-                background: "transparent",
-                border: "none",
-                color: TOKEN.amber,
-                fontSize: 12,
-                cursor: "pointer",
-                marginTop: 6,
-                textDecoration: "underline"
-              }}
-            >
-              Switch User
-            </button>
+            <div style={{ display: "flex", gap: 10, marginTop: 6, alignItems: "center" }}>
+              <button
+                onClick={() => {
+                  if (settings.haptic) triggerHaptic("medium");
+                  setScreen("user_select");
+                }}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: TOKEN.amber,
+                  fontSize: 12,
+                  cursor: "pointer",
+                  textDecoration: "underline"
+                }}
+              >
+                Switch User
+              </button>
+              <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 11 }}>•</span>
+              <button
+                onClick={() => {
+                  if (settings.haptic) triggerHaptic("medium");
+                  setAuthInitialMode("login");
+                  setScreen("auth");
+                }}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: TOKEN.amber,
+                  fontSize: 12,
+                  cursor: "pointer",
+                  textDecoration: "underline"
+                }}
+              >
+                Sign In with Email
+              </button>
+            </div>
           </div>
         )}
 
@@ -5814,7 +6021,90 @@ export default function KharchaApp() {
   }
 
   // ─── Root render ─────────────────────────────────────────────────────────────
-  // isDesktop is now managed by responsive state
+  const isAuthScreen = ["user_select", "auth", "register", "forgot_password", "lock"].includes(screen);
+
+  if (!isAuthScreen) {
+    const activeUser: UserProfile = users.find(u => u.id === activeUserId) || {
+      id: activeUserId || "default",
+      name: settings.userName || "Kharcha User",
+      email: settings.userName ? `${settings.userName.toLowerCase()}@kharcha.local` : "user@kharcha.local",
+      createdAt: new Date().toISOString()
+    };
+
+    if (platformMode === "desktop") {
+      return (
+        <div
+          style={{
+            ...S.root,
+            padding: 0,
+            ...(settings.accentColor ? {
+              ["--token-amber" as any]: settings.accentColor,
+              ["--token-amberText" as any]: settings.theme === "light" ? "#ffffff" : "#1a0a00",
+            } : {})
+          }}
+          className={`app-root theme-${settings.theme || "dark"}`}
+        >
+          <GlobalStyles />
+          <WindowsDesktopShell
+            user={activeUser}
+            users={users}
+            expenses={expenses}
+            settings={settings}
+            categories={categories}
+            wallets={wallets}
+            budgetGoals={budgetGoals}
+            onAddExpense={handleAddExpense}
+            onEditExpense={editExpense}
+            onDeleteExpense={deleteExpense}
+            onBulkDeleteExpenses={handleBulkDeleteExpenses}
+            onUpdateSettings={handleUpdateSettings}
+            onSwitchUser={() => setScreen("user_select")}
+            onSignOut={() => setScreen("user_select")}
+            onSwitchToWebMode={() => {
+              setPlatformMode("web");
+              handleUpdateSettings({ layoutMode: "responsive" });
+            }}
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div
+        style={{
+          ...S.root,
+          padding: 0,
+          ...(settings.accentColor ? {
+            ["--token-amber" as any]: settings.accentColor,
+            ["--token-amberText" as any]: settings.theme === "light" ? "#ffffff" : "#1a0a00",
+          } : {})
+        }}
+        className={`app-root theme-${settings.theme || "dark"}`}
+      >
+        <GlobalStyles />
+        <WebShell
+          user={activeUser}
+          users={users}
+          expenses={expenses}
+          settings={settings}
+          categories={categories}
+          wallets={wallets}
+          budgetGoals={budgetGoals}
+          onAddExpense={handleAddExpense}
+          onEditExpense={editExpense}
+          onDeleteExpense={deleteExpense}
+          onBulkDeleteExpenses={handleBulkDeleteExpenses}
+          onUpdateSettings={handleUpdateSettings}
+          onSwitchUser={() => setScreen("user_select")}
+          onSignOut={() => setScreen("user_select")}
+          onSwitchToDesktopMode={() => {
+            setPlatformMode("desktop");
+            handleUpdateSettings({ layoutMode: "desktop" });
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -5856,6 +6146,7 @@ export default function KharchaApp() {
           {isDesktop && ["dash", "hist", "reports", "set", "registry", "budget_goals", "monthly_breakdown", "subscriptions", "manage_wallets", "manage_cats", "audit_logs"].includes(screen) && <Sidebar />}
           <div style={isDesktop ? S.desktopContent : S.body}>
             {screen === "user_select" && renderUserSelect()}
+            {(screen === "auth" || screen === "register" || screen === "forgot_password") && renderAuth()}
             {screen === "lock" && renderLock()}
             {screen === "cat" && renderCat()}
             {screen === "amt" && renderAmt()}
