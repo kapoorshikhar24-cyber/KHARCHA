@@ -103,10 +103,10 @@ export default function KharchaApp() {
     if (typeof window === "undefined") return;
     const updatePlatform = () => {
       const isElectron = Boolean((window as any).electronAPI);
-      const isWindowsOS = typeof navigator !== "undefined" && /Win/i.test(navigator.userAgent || navigator.platform || "");
-      const isWideScreen = window.innerWidth >= 1024;
 
-      if (isElectron || (isWindowsOS && isWideScreen) || settings.layoutMode === "desktop" || settings.layoutMode === "windows") {
+      // Default on desktop computers is the Web SaaS experience (large cards, stacked lists, velocity charts).
+      // Windows Desktop Shell is only used when running in Electron or explicitly chosen by user.
+      if (isElectron || settings.layoutMode === "desktop" || settings.layoutMode === "windows") {
         setPlatformMode("desktop");
       } else {
         setPlatformMode("web");
