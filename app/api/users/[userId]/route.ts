@@ -112,12 +112,12 @@ export async function GET(
             dailyBudget: settings.dailyBudget,
             monthlyBudget: settings.monthlyBudget,
             monthlyResetDay: settings.monthlyResetDay || 1,
-            layoutMode: settings.layoutMode as any,
+            layoutMode: settings.layoutMode as "mobile" | "desktop" | "windows" | "phone" | "responsive" | "web",
             userName: user.name,
             userEmail: user.email || "",
             profileImage: user.avatar || undefined,
             defaultWalletId: settings.defaultWalletId,
-            currency: settings.currency as any,
+            currency: settings.currency as "₹" | "$" | "€" | "£",
             notificationPreferences: settings.notificationPreferences,
             dashboardPreferences: settings.dashboardPreferences,
           }
@@ -151,7 +151,7 @@ export async function GET(
         type: e.type as "expense" | "income",
         walletId: e.walletId || undefined,
         isRecurring: e.isRecurring,
-        frequency: (e.frequency as any) || undefined,
+        frequency: (e.frequency as "daily" | "weekly" | "monthly" | "yearly") || undefined,
       })),
       integrations: user.integrations.map((i) => ({
         type: i.integrationType,
@@ -160,8 +160,9 @@ export async function GET(
         connectedAt: i.connectedAt,
       })),
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message }, { status: 500 });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }
 
@@ -231,8 +232,9 @@ export async function PUT(
         isProfileCompleted: updatedUser.isProfileCompleted,
       },
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message }, { status: 500 });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }
 
@@ -282,7 +284,8 @@ export async function DELETE(
       success: true,
       message: "Account and associated data permanently deleted.",
     });
-  } catch (error: any) {
-    return NextResponse.json({ error: error?.message }, { status: 500 });
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    return NextResponse.json({ error: errorMsg }, { status: 500 });
   }
 }

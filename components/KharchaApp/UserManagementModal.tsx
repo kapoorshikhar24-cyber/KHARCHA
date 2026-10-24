@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { TOKEN } from "./Styles";
-import { UserProfile, Settings, UserIntegrationItem } from "./Types";
+import { UserProfile, Settings } from "./Types";
 import enterpriseStorage from "./EnterpriseStorage";
 import { triggerHaptic } from "./Utils";
 
@@ -49,7 +49,11 @@ export default function UserManagementModal({
   const [avatar, setAvatar] = useState(user.avatar || "🧑‍💻");
 
   // Preferences form state
-  const [currency, setCurrency] = useState<"₹" | "$" | "€" | "£">((settings.currency as any) || "₹");
+  const [currency, setCurrency] = useState<"₹" | "$" | "€" | "£">(
+    settings.currency === "$" || settings.currency === "€" || settings.currency === "£"
+      ? settings.currency
+      : "₹"
+  );
   const [monthlyBudget, setMonthlyBudget] = useState(settings.monthlyBudget?.toString() || "50000");
   const [dailyBudget, setDailyBudget] = useState(settings.dailyBudget?.toString() || "2000");
   const [resetDay, setResetDay] = useState(settings.monthlyResetDay?.toString() || "1");
@@ -98,7 +102,7 @@ export default function UserManagementModal({
     triggerHaptic("light");
 
     const newSettings: Partial<Settings> = {
-      currency: currency as any,
+      currency,
       monthlyBudget: parseFloat(monthlyBudget) || 50000,
       dailyBudget: parseFloat(dailyBudget) || 2000,
       monthlyResetDay: parseInt(resetDay, 10) || 1,
@@ -110,10 +114,11 @@ export default function UserManagementModal({
       setIsSaving(false);
       triggerHaptic("success");
       setStatusMsg({ type: "success", text: "Preferences saved successfully!" });
-    } catch (err: any) {
+    } catch (err: unknown) {
       setIsSaving(false);
       triggerHaptic("error");
-      setStatusMsg({ type: "error", text: err.message || "Failed to save preferences." });
+      const errorText = err instanceof Error ? err.message : "Failed to save preferences.";
+      setStatusMsg({ type: "error", text: errorText });
     }
   };
 
@@ -331,6 +336,23 @@ export default function UserManagementModal({
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
+                  <label style={labelStyle(isLight)}>Country / Region</label>
+                  <select
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    style={inputBoxStyle(isLight)}
+                  >
+                    <option value="IN">🇮🇳 India</option>
+                    <option value="US">🇺🇸 United States</option>
+                    <option value="GB">🇬🇧 United Kingdom</option>
+                    <option value="AE">🇦🇪 UAE</option>
+                    <option value="SG">🇸🇬 Singapore</option>
+                    <option value="AU">🇦🇺 Australia</option>
+                    <option value="DE">🇩🇪 Germany</option>
+                    <option value="CA">🇨🇦 Canada</option>
+                  </select>
+                </div>
+                <div>
                   <label style={labelStyle(isLight)}>Mobile Phone</label>
                   <input
                     type="tel"
@@ -340,15 +362,16 @@ export default function UserManagementModal({
                     style={inputBoxStyle(isLight)}
                   />
                 </div>
-                <div>
-                  <label style={labelStyle(isLight)}>Time Zone</label>
-                  <input
-                    type="text"
-                    value={timezone}
-                    onChange={(e) => setTimezone(e.target.value)}
-                    style={inputBoxStyle(isLight)}
-                  />
-                </div>
+              </div>
+
+              <div>
+                <label style={labelStyle(isLight)}>Time Zone</label>
+                <input
+                  type="text"
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  style={inputBoxStyle(isLight)}
+                />
               </div>
 
               <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 8 }}>

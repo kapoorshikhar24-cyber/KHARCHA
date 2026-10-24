@@ -161,12 +161,12 @@ export async function POST(req: Request) {
               dailyBudget: settings.dailyBudget,
               monthlyBudget: settings.monthlyBudget,
               monthlyResetDay: settings.monthlyResetDay || 1,
-              layoutMode: settings.layoutMode as any,
+              layoutMode: settings.layoutMode as "mobile" | "desktop" | "windows" | "phone" | "responsive" | "web",
               userName: user.name,
               userEmail: user.email || "",
               profileImage: user.avatar || undefined,
               defaultWalletId: settings.defaultWalletId,
-              currency: settings.currency as any,
+              currency: settings.currency as "₹" | "$" | "€" | "£",
             }
           : null,
         categories: categories.map((c) => ({
@@ -198,7 +198,7 @@ export async function POST(req: Request) {
           type: e.type as "expense" | "income",
           walletId: e.walletId || undefined,
           isRecurring: e.isRecurring,
-          frequency: (e.frequency as any) || undefined,
+          frequency: (e.frequency as "daily" | "weekly" | "monthly" | "yearly") || undefined,
         })),
         integrations: integrations.map((i) => ({
           type: i.integrationType,
@@ -208,10 +208,11 @@ export async function POST(req: Request) {
         })),
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
     console.error("Login error:", error);
     return NextResponse.json(
-      { error: "Authentication service error", details: error?.message },
+      { error: "Authentication service error", details: errorMsg },
       { status: 500 }
     );
   }

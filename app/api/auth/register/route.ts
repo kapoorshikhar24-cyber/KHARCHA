@@ -78,7 +78,7 @@ export async function POST(req: Request) {
       );
     }
 
-    if (password !== confirmPassword) {
+    if (confirmPassword !== undefined && password !== confirmPassword) {
       return NextResponse.json(
         { error: "Passwords do not match." },
         { status: 400 }
@@ -228,10 +228,11 @@ export async function POST(req: Request) {
       // In local/development environment, include verification code for testing convenience
       devVerificationCode: process.env.NODE_ENV !== "production" ? verificationCode : undefined,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
     console.error("Registration error:", error);
     return NextResponse.json(
-      { error: "Internal server error during registration", details: error?.message },
+      { error: "Internal server error during registration", details: errorMsg },
       { status: 500 }
     );
   }

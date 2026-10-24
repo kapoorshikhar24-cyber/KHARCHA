@@ -80,10 +80,11 @@ export async function GET(req: Request) {
       settings: user.settings,
       integrations: user.integrations,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
     console.error("GET Onboarding error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch onboarding state", details: error?.message },
+      { error: "Failed to fetch onboarding state", details: errorMsg },
       { status: 500 }
     );
   }
@@ -297,10 +298,11 @@ export async function POST(req: Request) {
         isCompleted: result.status === "completed",
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
     console.error("POST Onboarding error:", error);
     return NextResponse.json(
-      { error: "Failed to save onboarding progress", details: error?.message },
+      { error: "Failed to save onboarding progress", details: errorMsg },
       { status: 500 }
     );
   }

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { TOKEN } from "./Styles";
-import { UserProfile, Settings, Category, Wallet } from "./Types";
+import { UserProfile, Settings } from "./Types";
 import enterpriseStorage from "./EnterpriseStorage";
 import { triggerHaptic } from "./Utils";
 
@@ -41,14 +41,11 @@ export default function OnboardingFlow({
   initialSettings,
   theme = "dark",
   onComplete,
-  onSkipAll,
 }: OnboardingFlowProps) {
   const isLight = theme === "light";
 
   // Step state (1 to 6)
   const [currentStep, setCurrentStep] = useState<number>(1);
-  const [completedSteps, setCompletedSteps] = useState<string[]>([]);
-  const [skippedSteps, setSkippedSteps] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -61,7 +58,11 @@ export default function OnboardingFlow({
   const [selectedAvatar, setSelectedAvatar] = useState(user.avatar || "🧑‍💻");
 
   // Step 3: Financial preferences
-  const [currency, setCurrency] = useState<"₹" | "$" | "€" | "£">((initialSettings?.currency as any) || "₹");
+  const [currency, setCurrency] = useState<"₹" | "$" | "€" | "£">(
+    initialSettings?.currency === "$" || initialSettings?.currency === "€" || initialSettings?.currency === "£"
+      ? initialSettings.currency
+      : "₹"
+  );
   const [monthlyBudget, setMonthlyBudget] = useState(initialSettings?.monthlyBudget?.toString() || "50000");
   const [dailyBudget, setDailyBudget] = useState(initialSettings?.dailyBudget?.toString() || "2000");
   const [monthlyResetDay, setMonthlyResetDay] = useState(initialSettings?.monthlyResetDay?.toString() || "1");
@@ -70,9 +71,6 @@ export default function OnboardingFlow({
   const [enableSms, setEnableSms] = useState(true);
   const [enablePush, setEnablePush] = useState(true);
   const [enableSync, setEnableSync] = useState(true);
-
-  // Step 6 celebration
-  const [celebrate, setCelebrate] = useState(false);
 
   // Load persistent onboarding state on mount
   useEffect(() => {
@@ -83,12 +81,6 @@ export default function OnboardingFlow({
         if (res.onboarding.currentStep && res.onboarding.currentStep >= 1 && res.onboarding.currentStep <= 6) {
           setCurrentStep(res.onboarding.currentStep);
         }
-        if (Array.isArray(res.onboarding.completedSteps)) {
-          setCompletedSteps(res.onboarding.completedSteps);
-        }
-        if (Array.isArray(res.onboarding.skippedOptionalSteps)) {
-          setSkippedSteps(res.onboarding.skippedOptionalSteps);
-        }
         if (res.user) {
           if (res.user.displayName) setDisplayName(res.user.displayName);
           if (res.user.phoneNumber) setPhoneNumber(res.user.phoneNumber);
@@ -96,7 +88,9 @@ export default function OnboardingFlow({
           if (res.user.avatar) setSelectedAvatar(res.user.avatar);
         }
         if (res.settings) {
-          if (res.settings.currency) setCurrency(res.settings.currency as any);
+          if (res.settings.currency === "₹" || res.settings.currency === "$" || res.settings.currency === "€" || res.settings.currency === "£") {
+            setCurrency(res.settings.currency);
+          }
           if (res.settings.monthlyBudget) setMonthlyBudget(res.settings.monthlyBudget.toString());
           if (res.settings.dailyBudget) setDailyBudget(res.settings.dailyBudget.toString());
         }
@@ -116,7 +110,35 @@ export default function OnboardingFlow({
     setIsSaving(true);
     triggerHaptic("light");
 
-    const payload: any = {
+    interface OnboardingPayload {
+      userId: string;
+      step: number;
+      stepKey?: string;
+      isCompleted: boolean;
+      isSkipped: boolean;
+      isFinalStep: boolean;
+      profileData?: {
+        name: string;
+        displayName: string;
+        phoneNumber: string;
+        country: string;
+        timezone: string;
+        avatar: string;
+      };
+      preferencesData?: {
+        currency: string;
+        monthlyBudget: number;
+        dailyBudget: number;
+        monthlyResetDay: number;
+      };
+      integrationsData?: Array<{
+        integrationType: string;
+        connectionStatus: string;
+        consentStatus: string;
+      }>;
+    }
+
+    const payload: OnboardingPayload = {
       userId: user.id,
       step: targetStep,
       stepKey,
@@ -169,17 +191,8 @@ export default function OnboardingFlow({
       return;
     }
 
-    if (stepKey) {
-      if (isSkipped) {
-        setSkippedSteps((prev) => Array.from(new Set([...prev, stepKey])));
-      } else {
-        setCompletedSteps((prev) => Array.from(new Set([...prev, stepKey])));
-      }
-    }
-
     setCurrentStep(targetStep);
     if (targetStep === 6) {
-      setCelebrate(true);
       triggerHaptic("success");
     }
   };
@@ -212,7 +225,7 @@ export default function OnboardingFlow({
       userName: fullName,
       userEmail: user.email || "",
       profileImage: selectedAvatar,
-      currency: currency as any,
+      currency,
     };
 
     onComplete(updatedUser, updatedSettings);
