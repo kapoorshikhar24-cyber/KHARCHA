@@ -76,6 +76,7 @@ import {
 } from "./SubComponents";
 import ReportsScreen from "./ReportsScreen";
 import AuthScreen, { AuthMode } from "./AuthScreen";
+import OnboardingFlow from "./OnboardingFlow";
 import WebShell from "./web/WebShell";
 import WindowsDesktopShell from "./desktop/WindowsDesktopShell";
 import { PlatformMode } from "./types/Platform";
@@ -99,13 +100,21 @@ export default function KharchaApp() {
   const [platformMode, setPlatformMode] = useState<PlatformMode>("web");
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      if (window.electronAPI) {
+    if (typeof window === "undefined") return;
+    const updatePlatform = () => {
+      if ((window as any).electronAPI) {
         setPlatformMode("desktop");
+      } else if (window.innerWidth < 768) {
+        setPlatformMode("web");
       } else if (settings.layoutMode === "desktop" || settings.layoutMode === "windows") {
         setPlatformMode("desktop");
+      } else {
+        setPlatformMode("web");
       }
-    }
+    };
+    updatePlatform();
+    window.addEventListener("resize", updatePlatform);
+    return () => window.removeEventListener("resize", updatePlatform);
   }, [settings.layoutMode]);
 
   const [hasLoaded, setHasLoaded] = useState(false);
@@ -278,7 +287,12 @@ export default function KharchaApp() {
           if (bootstrapResult.settings.pin || bootstrapResult.settings.biometric) {
             setScreen("lock");
           } else {
-            setScreen("dash");
+            const activeUser = bootstrapResult.users.find(u => u.id === bootstrapResult.activeUserId);
+            if (activeUser && activeUser.onboardingStatus && activeUser.onboardingStatus !== "completed" && !activeUser.isProfileCompleted) {
+              setScreen("onboarding");
+            } else {
+              setScreen("dash");
+            }
           }
           setHasLoaded(true);
           return;
@@ -1115,8 +1129,19 @@ export default function KharchaApp() {
   }, [settings.haptic]);
 
   const handleUpdateSettings = useCallback((newSettings: Partial<Settings>) => {
-    setSettings(prev => ({ ...prev, ...newSettings }));
-  }, []);
+    setSettings(prev => {
+      const updated = { ...prev, ...newSettings };
+      if (activeUserId) {
+        const userKeys = getUserStorageKeys(activeUserId);
+        saveStorage(userKeys.SETTINGS, updated);
+      }
+      return updated;
+    });
+  }, [activeUserId]);
+
+  const handleUpdateUser = useCallback((updatedFields: Partial<UserProfile>) => {
+    setUsers(prev => prev.map(u => u.id === activeUserId ? { ...u, ...updatedFields } : u));
+  }, [activeUserId]);
 
 
   const handleQuickAdd = useCallback(() => {
@@ -1572,6 +1597,7 @@ export default function KharchaApp() {
       <AuthScreen
         initialMode={authInitialMode}
         isDesktop={isDesktop}
+        theme={settings.theme || "dark"}
         onSwitchToProfiles={() => setScreen("user_select")}
         onSuccess={(result) => {
           const authUser = result.user;
@@ -1621,8 +1647,12 @@ export default function KharchaApp() {
           setLoginSuccess(false);
           setBioStatus(null);
 
-          // Direct redirect to dashboard
-          setScreen("dash");
+          // Check onboarding status
+          if (authUser.onboardingStatus && authUser.onboardingStatus !== "completed" && !authUser.isProfileCompleted) {
+            setScreen("onboarding");
+          } else {
+            setScreen("dash");
+          }
           if (loadedSettings.haptic) triggerHaptic("success");
         }}
       />
@@ -1630,23 +1660,27 @@ export default function KharchaApp() {
   }
 
   function renderUserSelect() {
+    const isLight = settings.theme === "light";
     return (
       <div style={{
         minHeight: "100%", width: "100%",
-        background: "linear-gradient(160deg, #0b0b10 0%, #10101a 60%, #0d0d16 100%)",
+        background: isLight 
+          ? "linear-gradient(180deg, #FFFFFF 0%, #F8F9FD 100%)" 
+          : TOKEN.bg,
+        color: isLight ? "#111827" : TOKEN.text,
         display: "flex", flexDirection: "column", alignItems: "center",
         justifyContent: "center", padding: "40px 24px", boxSizing: "border-box", gap: 0
       }} className="screen-enter form-screen">
         {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: 36 }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div style={{
             fontSize: 11, color: TOKEN.amber, letterSpacing: "0.25em",
-            textTransform: "uppercase", fontWeight: 700, marginBottom: 10
+            textTransform: "uppercase", fontWeight: 800, marginBottom: 8
           }}>KHARCHA</div>
-          <div style={{ fontSize: 28, fontWeight: 800, color: "#ffffff", lineHeight: 1.2 }}>
+          <div style={{ fontSize: 28, fontWeight: 800, color: isLight ? "#111827" : TOKEN.text, lineHeight: 1.2 }}>
             Who's logging in?
           </div>
-          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", marginTop: 8 }}>
+          <div style={{ fontSize: 13, color: isLight ? "#4B5563" : TOKEN.muted, marginTop: 8 }}>
             Select an existing profile or create your own account
           </div>
         </div>
@@ -1655,7 +1689,7 @@ export default function KharchaApp() {
         <div style={{
           display: "grid",
           gridTemplateColumns: `repeat(${Math.min(users.length + 1, 3)}, minmax(110px, 140px))`,
-          gap: 18, justifyContent: "center", width: "100%", maxWidth: 480
+          gap: 16, justifyContent: "center", width: "100%", maxWidth: 480
         }}>
           {users.map((user) => {
             const colors = ["#EF9F27", "#378ADD", "#1D9E75", "#7F77DD", "#D85A30"];
@@ -1672,20 +1706,21 @@ export default function KharchaApp() {
                 style={{
                   display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
                   padding: "22px 14px", borderRadius: 22,
-                  border: `1px solid ${isActive ? accentColor : "rgba(255,255,255,0.08)"}`,
-                  background: isActive ? `${accentColor}12` : "rgba(255,255,255,0.04)",
+                  border: `1px solid ${isActive ? accentColor : (isLight ? "rgba(0,0,0,0.08)" : TOKEN.border)}`,
+                  background: isActive ? `${accentColor}14` : (isLight ? "#FFFFFF" : TOKEN.surfaceHighlight),
+                  boxShadow: isLight ? "0 4px 16px rgba(0,0,0,0.05)" : "none",
                   cursor: "pointer", transition: "all 0.2s",
                   backdropFilter: "blur(12px)",
                   position: "relative"
                 }}
                 onMouseEnter={e => {
-                  (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.09)";
+                  (e.currentTarget as HTMLButtonElement).style.background = isLight ? "#F9FAFB" : TOKEN.surfaceElevated;
                   (e.currentTarget as HTMLButtonElement).style.borderColor = accentColor;
                   (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-4px)";
                 }}
                 onMouseLeave={e => {
-                  (e.currentTarget as HTMLButtonElement).style.background = isActive ? `${accentColor}12` : "rgba(255,255,255,0.04)";
-                  (e.currentTarget as HTMLButtonElement).style.borderColor = isActive ? accentColor : "rgba(255,255,255,0.08)";
+                  (e.currentTarget as HTMLButtonElement).style.background = isActive ? `${accentColor}14` : (isLight ? "#FFFFFF" : TOKEN.surfaceHighlight);
+                  (e.currentTarget as HTMLButtonElement).style.borderColor = isActive ? accentColor : (isLight ? "rgba(0,0,0,0.08)" : TOKEN.border);
                   (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
                 }}
               >
@@ -1705,19 +1740,19 @@ export default function KharchaApp() {
                   display: "flex", alignItems: "center", justifyContent: "center",
                   border: `2.5px solid ${accentColor}55`,
                   fontSize: 28, fontWeight: 700, color: accentColor,
-                  boxShadow: `0 0 24px ${accentColor}22`
+                  boxShadow: isLight ? `0 6px 18px ${accentColor}25` : `0 0 24px ${accentColor}22`
                 }}>
                   {user.avatar
                     ? <img src={user.avatar} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt={user.name} />
                     : user.name.charAt(0).toUpperCase()
                   }
                 </div>
-                <div style={{ fontSize: 13.5, fontWeight: 700, color: "#ffffff", textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", width: "100%", whiteSpace: "nowrap" }}>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: isLight ? "#111827" : TOKEN.text, textAlign: "center", overflow: "hidden", textOverflow: "ellipsis", width: "100%", whiteSpace: "nowrap" }}>
                   {user.name}
                 </div>
                 <div style={{
-                  fontSize: 10, color: accentColor, fontWeight: 600, letterSpacing: "0.1em",
-                  textTransform: "uppercase", background: `${accentColor}22`,
+                  fontSize: 10, color: accentColor, fontWeight: 700, letterSpacing: "0.08em",
+                  textTransform: "uppercase", background: `${accentColor}18`,
                   padding: "3px 10px", borderRadius: 20
                 }}>
                   {isProtected ? "Locked →" : "Login →"}
@@ -1736,35 +1771,37 @@ export default function KharchaApp() {
             style={{
               display: "flex", flexDirection: "column", alignItems: "center", gap: 12,
               padding: "22px 14px", borderRadius: 22,
-              border: "1.5px dashed rgba(239,159,39,0.3)",
-              background: "rgba(239,159,39,0.03)", cursor: "pointer", transition: "all 0.2s"
+              border: `1.5px dashed ${isLight ? "rgba(217,119,6,0.35)" : "rgba(239,159,39,0.3)"}`,
+              background: isLight ? "#FFFBEB" : "rgba(239,159,39,0.03)",
+              boxShadow: isLight ? "0 4px 16px rgba(217,119,6,0.06)" : "none",
+              cursor: "pointer", transition: "all 0.2s"
             }}
             onMouseEnter={e => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(239,159,39,0.7)";
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,159,39,0.08)";
+              (e.currentTarget as HTMLButtonElement).style.borderColor = TOKEN.amber;
+              (e.currentTarget as HTMLButtonElement).style.background = isLight ? "#FEF3C7" : "rgba(239,159,39,0.08)";
               (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-4px)";
             }}
             onMouseLeave={e => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(239,159,39,0.3)";
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,159,39,0.03)";
+              (e.currentTarget as HTMLButtonElement).style.borderColor = isLight ? "rgba(217,119,6,0.35)" : "rgba(239,159,39,0.3)";
+              (e.currentTarget as HTMLButtonElement).style.background = isLight ? "#FFFBEB" : "rgba(239,159,39,0.03)";
               (e.currentTarget as HTMLButtonElement).style.transform = "translateY(0)";
             }}
           >
             <div style={{
               width: 70, height: 70, borderRadius: "50%",
-              background: "rgba(239,159,39,0.1)",
+              background: isLight ? "#FEF3C7" : "rgba(239,159,39,0.1)",
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: 28, color: TOKEN.amber,
-              border: "1.5px dashed rgba(239,159,39,0.4)"
+              border: `1.5px dashed ${isLight ? "rgba(217,119,6,0.4)" : "rgba(239,159,39,0.4)"}`
             }}>+</div>
             <div style={{ fontSize: 13.5, fontWeight: 700, color: TOKEN.amber }}>Sign Up</div>
-            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.4)" }}>New Account</div>
+            <div style={{ fontSize: 10, color: isLight ? "#6B7280" : TOKEN.muted }}>New Account</div>
           </button>
         </div>
 
         {/* Independent Registration & Login Action Buttons */}
         <div style={{
-          marginTop: 36,
+          marginTop: 34,
           display: "flex",
           flexDirection: "column",
           gap: 12,
@@ -1781,9 +1818,11 @@ export default function KharchaApp() {
               width: "100%",
               padding: "13px 20px",
               borderRadius: 14,
-              border: "1px solid rgba(239,159,39,0.4)",
-              background: "linear-gradient(135deg, rgba(239,159,39,0.22), rgba(216,90,48,0.15))",
-              color: TOKEN.amber,
+              border: isLight ? "none" : "1px solid rgba(239,159,39,0.4)",
+              background: isLight 
+                ? "linear-gradient(135deg, #D97706 0%, #EA580C 100%)" 
+                : "linear-gradient(135deg, rgba(239,159,39,0.22), rgba(216,90,48,0.15))",
+              color: isLight ? "#FFFFFF" : TOKEN.amber,
               fontWeight: 700,
               fontSize: 13.5,
               cursor: "pointer",
@@ -1791,15 +1830,13 @@ export default function KharchaApp() {
               alignItems: "center",
               justifyContent: "center",
               gap: 8,
-              boxShadow: "0 4px 16px rgba(239,159,39,0.12)",
+              boxShadow: isLight ? "0 6px 20px rgba(217,119,6,0.25)" : "0 4px 16px rgba(239,159,39,0.12)",
               transition: "all 0.2s",
             }}
             onMouseEnter={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = "linear-gradient(135deg, rgba(239,159,39,0.32), rgba(216,90,48,0.22))";
               (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.01)";
             }}
             onMouseLeave={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = "linear-gradient(135deg, rgba(239,159,39,0.22), rgba(216,90,48,0.15))";
               (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
             }}
           >
@@ -1815,11 +1852,12 @@ export default function KharchaApp() {
             }}
             style={{
               width: "100%",
-              padding: "11px 20px",
+              padding: "12px 20px",
               borderRadius: 14,
-              border: "1px solid rgba(255,255,255,0.08)",
-              background: "rgba(255,255,255,0.04)",
-              color: "rgba(255,255,255,0.7)",
+              border: isLight ? "1px solid rgba(0,0,0,0.1)" : "1px solid rgba(255,255,255,0.08)",
+              background: isLight ? "#FFFFFF" : "rgba(255,255,255,0.04)",
+              color: isLight ? "#1F2937" : "rgba(255,255,255,0.7)",
+              boxShadow: isLight ? "0 2px 8px rgba(0,0,0,0.04)" : "none",
               fontWeight: 600,
               fontSize: 13,
               cursor: "pointer",
@@ -1830,12 +1868,12 @@ export default function KharchaApp() {
               transition: "all 0.2s",
             }}
             onMouseEnter={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.08)";
-              (e.currentTarget as HTMLButtonElement).style.color = "#ffffff";
+              (e.currentTarget as HTMLButtonElement).style.background = isLight ? "#F9FAFB" : "rgba(255,255,255,0.08)";
+              (e.currentTarget as HTMLButtonElement).style.color = isLight ? "#111827" : "#ffffff";
             }}
             onMouseLeave={e => {
-              (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.04)";
-              (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.7)";
+              (e.currentTarget as HTMLButtonElement).style.background = isLight ? "#FFFFFF" : "rgba(255,255,255,0.04)";
+              (e.currentTarget as HTMLButtonElement).style.color = isLight ? "#1F2937" : "rgba(255,255,255,0.7)";
             }}
           >
             <span>✉️</span>
@@ -1844,7 +1882,7 @@ export default function KharchaApp() {
         </div>
 
         {/* Footer info */}
-        <div style={{ marginTop: 28, fontSize: 11.5, color: "rgba(255,255,255,0.25)", textAlign: "center" }}>
+        <div style={{ marginTop: 26, fontSize: 11.5, color: isLight ? "#6B7280" : "rgba(255,255,255,0.25)", textAlign: "center" }}>
           New users can register independently • Existing users can unlock via PIN or credentials
         </div>
       </div>
@@ -1918,60 +1956,95 @@ export default function KharchaApp() {
     const lastCount = expenses.length;
     const lastTotal = sumExpenses(expenses);
     const activeUser = users.find(u => u.id === activeUserId);
+    const isLight = settings.theme === "light";
 
     return (
       <div style={{
         ...S.screen,
-        background: "#060608",
-        padding: "40px 24px",
+        background: isLight 
+          ? "linear-gradient(180deg, #FFFFFF 0%, #F8F9FD 100%)" 
+          : "linear-gradient(180deg, #09090F 0%, #060608 100%)",
+        padding: "36px 24px",
         justifyContent: "flex-start",
         gap: 0,
+        boxSizing: "border-box",
+        width: "100%",
+        minHeight: "100%",
         ...(shake ? { animation: "shake 0.4s ease-in-out" } : {}),
         ...(loginSuccess ? S.pulseSuccess : {}),
       } as any} className="screen-enter form-screen">
         {bioStatus && <BiometricOverlay status={bioStatus} onCancel={() => setBioStatus(null)} />}
 
-        {/* Header */}
-        <div style={S.lockHeader}>
-          <div style={S.lockSubtitle}>Expense Tracker</div>
-          <div style={S.lockTitle}>KHARCHA</div>
+        {/* Brand Header */}
+        <div style={{ textAlign: "center", marginBottom: 16 }}>
+          <div style={{
+            fontSize: 10.5,
+            letterSpacing: "0.28em",
+            color: TOKEN.amber,
+            textTransform: "uppercase",
+            fontWeight: 800,
+            marginBottom: 6,
+          }}>
+            Expense Tracker
+          </div>
+          <div style={{
+            fontSize: 32,
+            fontWeight: 800,
+            color: isLight ? "#111827" : "#FFFFFF",
+            letterSpacing: "0.06em",
+          }}>
+            KHARCHA
+          </div>
         </div>
 
         {/* Active User profile details */}
         {activeUser && (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", margin: "20px 0 15px" }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", margin: "10px 0 14px" }}>
             <div style={{
-              width: 80, height: 80, borderRadius: "50%", overflow: "hidden",
-              background: "rgba(255,255,255,0.03)", display: "flex", alignItems: "center", justifyContent: "center",
-              border: `2px solid ${TOKEN.amber}`, fontSize: 32, fontWeight: 700, color: TOKEN.amber,
-              boxShadow: `0 0 20px rgba(239, 159, 39, 0.15)`
+              width: 82, height: 82, borderRadius: "50%", overflow: "hidden",
+              background: isLight ? "#FFF7ED" : "rgba(239, 159, 39, 0.1)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              border: `2.5px solid ${TOKEN.amber}`, fontSize: 34, fontWeight: 800, color: TOKEN.amber,
+              boxShadow: isLight
+                ? "0 10px 25px -4px rgba(217, 119, 6, 0.22), 0 4px 10px rgba(0,0,0,0.04)"
+                : "0 0 24px rgba(239, 159, 39, 0.2)"
             }}>
               {activeUser.avatar
                 ? <img src={activeUser.avatar} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt={activeUser.name} />
                 : activeUser.name.charAt(0).toUpperCase()
               }
             </div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: "#ffffff", marginTop: 12 }}>
+            <div style={{
+              fontSize: 18.5,
+              fontWeight: 700,
+              color: isLight ? "#111827" : "#FFFFFF",
+              marginTop: 10,
+            }}>
               {activeUser.name}
             </div>
-            <div style={{ display: "flex", gap: 10, marginTop: 6, alignItems: "center" }}>
+            <div style={{ display: "flex", gap: 10, marginTop: 8, alignItems: "center" }}>
               <button
                 onClick={() => {
                   if (settings.haptic) triggerHaptic("medium");
                   setScreen("user_select");
                 }}
                 style={{
-                  background: "transparent",
-                  border: "none",
+                  background: isLight ? "#F3F4F6" : "rgba(255,255,255,0.06)",
+                  border: `1px solid ${isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)"}`,
+                  borderRadius: 20,
+                  padding: "4px 12px",
                   color: TOKEN.amber,
-                  fontSize: 12,
+                  fontSize: 11.5,
+                  fontWeight: 600,
                   cursor: "pointer",
-                  textDecoration: "underline"
+                  transition: "all 0.15s",
                 }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = TOKEN.amber)}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)")}
               >
                 Switch User
               </button>
-              <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 11 }}>•</span>
+              <span style={{ color: isLight ? "rgba(0,0,0,0.2)" : "rgba(255,255,255,0.2)", fontSize: 11 }}>•</span>
               <button
                 onClick={() => {
                   if (settings.haptic) triggerHaptic("medium");
@@ -1979,13 +2052,18 @@ export default function KharchaApp() {
                   setScreen("auth");
                 }}
                 style={{
-                  background: "transparent",
-                  border: "none",
+                  background: isLight ? "#F3F4F6" : "rgba(255,255,255,0.06)",
+                  border: `1px solid ${isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)"}`,
+                  borderRadius: 20,
+                  padding: "4px 12px",
                   color: TOKEN.amber,
-                  fontSize: 12,
+                  fontSize: 11.5,
+                  fontWeight: 600,
                   cursor: "pointer",
-                  textDecoration: "underline"
+                  transition: "all 0.15s",
                 }}
+                onMouseEnter={e => (e.currentTarget.style.borderColor = TOKEN.amber)}
+                onMouseLeave={e => (e.currentTarget.style.borderColor = isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.08)")}
               >
                 Sign In with Email
               </button>
@@ -1995,65 +2073,178 @@ export default function KharchaApp() {
 
         {/* Biometric trigger if active */}
         {settings.biometric && (
-          <div style={{ display: "flex", justifyContent: "center", margin: "10px 0 15px" }}>
+          <div style={{ display: "flex", justifyContent: "center", margin: "6px 0 10px" }}>
             <button 
               onClick={() => { if (settings.haptic) triggerHaptic("medium"); handleBiometric(); }} 
-              style={{ ...S.biometricCircle, width: 44, height: 44 } as any}
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: "50%",
+                background: isLight ? "#FFF7ED" : "rgba(239, 159, 39, 0.08)",
+                border: `1.5px solid ${TOKEN.amber}`,
+                boxShadow: isLight ? "0 4px 14px rgba(217, 119, 6, 0.15)" : "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer",
+                transition: "all 0.2s",
+              }}
               aria-label="Unlock with biometrics"
             >
-              <FingerprintIcon size={22} color={TOKEN.amber} />
+              <FingerprintIcon size={24} color={TOKEN.amber} />
             </button>
           </div>
         )}
 
         {/* Instruction Text */}
-        <div style={{ ...S.instructionText, marginTop: 10 }}>
-          <div style={S.unlockText}>Enter PIN to unlock</div>
+        <div style={{ textAlign: "center", marginTop: 6 }}>
+          <div style={{
+            fontSize: 14,
+            fontWeight: 600,
+            color: isLight ? "#4B5563" : TOKEN.textSub,
+          }}>
+            Enter PIN to unlock
+          </div>
         </div>
 
         {/* PIN Squares */}
-        <div style={{ ...S.pinRow, margin: "15px 0" }}>
+        <div style={{ display: "flex", gap: 14, justifyContent: "center", margin: "14px 0 18px" }}>
           {[0, 1, 2, 3].map((i) => {
             const filled = i < pinInput.length;
             return (
-              <div key={i} style={S.pinSquare as any}>
-                <div style={{
-                  ...S.pinCircle,
-                  ...(filled ? S.pinCircleFilled : {})
-                } as any} />
+              <div
+                key={i}
+                style={{
+                  width: 50,
+                  height: 54,
+                  borderRadius: 14,
+                  background: isLight
+                    ? (filled ? "#FFFBEB" : "#F3F4F8")
+                    : (filled ? "rgba(239, 159, 39, 0.12)" : TOKEN.surfaceHighlight),
+                  border: `1.5px solid ${filled ? TOKEN.amber : (isLight ? "rgba(0,0,0,0.08)" : TOKEN.border)}`,
+                  boxShadow: isLight
+                    ? (filled ? "0 4px 12px rgba(217,119,6,0.18)" : "inset 0 1px 3px rgba(0,0,0,0.04)")
+                    : "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                  transform: filled ? "scale(1.05)" : "scale(1)",
+                }}
+              >
+                <div
+                  style={{
+                    width: filled ? 12 : 8,
+                    height: filled ? 12 : 8,
+                    borderRadius: "50%",
+                    background: filled ? TOKEN.amber : (isLight ? "#CBD5E1" : TOKEN.dim),
+                    boxShadow: filled ? `0 0 10px ${TOKEN.amber}` : "none",
+                    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                  }}
+                />
               </div>
             );
           })}
         </div>
 
-        {/* Number Keypad (Minimal) */}
+        {/* Number Keypad (Minimal & tactile) */}
         {settings.pin && (
           <div style={{
-            display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
-            gap: 12, width: "100%", maxWidth: 240, margin: "10px auto 0",
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 12,
+            width: "100%",
+            maxWidth: 270,
+            margin: "0 auto",
           }}>
             {[1, 2, 3, 4, 5, 6, 7, 8, 9, "forgot", 0, "back"].map((n) => {
               if (n === "forgot") return (
-                <button key="f" onClick={handleForgot} style={{
-                  background: "none", border: "none", color: TOKEN.dim, fontSize: 10, cursor: "pointer"
-                }}>FORGOT</button>
+                <button
+                  key="f"
+                  onClick={handleForgot}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: isLight ? "#6B7280" : TOKEN.dim,
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: "0.05em",
+                    cursor: "pointer",
+                    height: 50,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 14,
+                    transition: "color 0.15s",
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.color = TOKEN.amber)}
+                  onMouseLeave={e => (e.currentTarget.style.color = isLight ? "#6B7280" : TOKEN.dim)}
+                >
+                  FORGOT
+                </button>
               );
               if (n === "back") return (
-                <button key="b" onClick={() => { if (settings.haptic) triggerHaptic("light"); setPinInput(p => p.slice(0, -1)); }} style={{
-                  background: "none", border: "none", color: TOKEN.dim, fontSize: 18, cursor: "pointer"
-                }}>⌫</button>
+                <button
+                  key="b"
+                  onClick={() => {
+                    if (settings.haptic) triggerHaptic("light");
+                    setPinInput((p) => p.slice(0, -1));
+                  }}
+                  style={{
+                    background: isLight ? "#F9FAFB" : "rgba(255,255,255,0.03)",
+                    border: `1px solid ${isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.05)"}`,
+                    color: isLight ? "#374151" : TOKEN.textSub,
+                    fontSize: 22,
+                    cursor: "pointer",
+                    height: 50,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: 14,
+                    boxShadow: isLight ? "0 2px 6px rgba(0,0,0,0.04)" : "none",
+                    transition: "all 0.15s",
+                  }}
+                  onPointerDown={e => {
+                    e.currentTarget.style.background = isLight ? "#E5E7EB" : "rgba(255,255,255,0.1)";
+                    e.currentTarget.style.transform = "scale(0.95)";
+                  }}
+                  onPointerUp={e => {
+                    e.currentTarget.style.background = isLight ? "#F9FAFB" : "rgba(255,255,255,0.03)";
+                    e.currentTarget.style.transform = "scale(1)";
+                  }}
+                >
+                  ⌫
+                </button>
               );
               return (
-                <button key={n} onClick={() => handlePinInput(n.toString())} className="key-btn" style={{
-                  background: "rgba(255,255,255,0.03)", 
-                  border: "none",
-                  borderRadius: 10, 
-                  color: TOKEN.textSub, 
-                  fontSize: 20,
-                  height: 44,
-                  cursor: "pointer",
-                  transition: "background 0.2s"
-                }} onPointerDown={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.1)"} onPointerUp={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.03)"}>
+                <button
+                  key={n}
+                  onClick={() => handlePinInput(n.toString())}
+                  className="key-btn"
+                  style={{
+                    background: isLight ? "#FFFFFF" : "rgba(255,255,255,0.03)",
+                    border: `1px solid ${isLight ? "rgba(0,0,0,0.07)" : "rgba(255,255,255,0.05)"}`,
+                    borderRadius: 14,
+                    color: isLight ? "#111827" : TOKEN.text,
+                    fontSize: 22,
+                    fontWeight: 600,
+                    height: 50,
+                    cursor: "pointer",
+                    boxShadow: isLight ? "0 2px 8px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)" : "none",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    transition: "all 0.15s",
+                  }}
+                  onPointerDown={e => {
+                    e.currentTarget.style.background = isLight ? "#F3F4F8" : "rgba(255,255,255,0.12)";
+                    e.currentTarget.style.transform = "scale(0.94)";
+                  }}
+                  onPointerUp={e => {
+                    e.currentTarget.style.background = isLight ? "#FFFFFF" : "rgba(255,255,255,0.03)";
+                    e.currentTarget.style.transform = "scale(1)";
+                  }}
+                >
                   {n}
                 </button>
               );
@@ -2062,12 +2253,28 @@ export default function KharchaApp() {
         )}
 
         {/* Footer */}
-        <div style={S.lockFooter}>
-          <button style={S.footerBtn as any} aria-label="More">
-            <ArrowDownIcon size={20} color={TOKEN.dim} />
-          </button>
-          <div style={S.sessionSummary as any}>
-            <div style={{ width: 4, height: 4, borderRadius: "50%", background: TOKEN.amber }} />
+        <div style={{
+          marginTop: "auto",
+          paddingTop: 20,
+          paddingBottom: 6,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 10,
+          width: "100%",
+        }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 11.5,
+            color: isLight ? "#6B7280" : TOKEN.muted,
+            background: isLight ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.03)",
+            padding: "4px 12px",
+            borderRadius: 20,
+            border: `1px solid ${isLight ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.04)"}`,
+          }}>
+            <div style={{ width: 5, height: 5, borderRadius: "50%", background: TOKEN.amber }} />
             <span>Last session • {lastCount} expenses • {fmt(lastTotal)}</span>
           </div>
         </div>
@@ -6021,6 +6228,45 @@ export default function KharchaApp() {
   }
 
   // ─── Root render ─────────────────────────────────────────────────────────────
+  if (screen === "onboarding") {
+    const activeUser: UserProfile = users.find(u => u.id === activeUserId) || {
+      id: activeUserId || "default",
+      name: settings.userName || "Kharcha User",
+      email: settings.userName ? `${settings.userName.toLowerCase()}@kharcha.local` : "user@kharcha.local",
+      createdAt: new Date().toISOString()
+    };
+
+    return (
+      <div
+        style={{
+          ...S.root,
+          padding: 0,
+        }}
+        className={`app-root theme-${settings.theme || "dark"}`}
+      >
+        <GlobalStyles />
+        <OnboardingFlow
+          user={activeUser}
+          initialSettings={settings}
+          theme={settings.theme || "dark"}
+          onComplete={(updatedUser, updatedSettings) => {
+            setUsers(prev => prev.map(u => u.id === updatedUser.id ? { ...u, ...updatedUser } : u));
+            if (updatedSettings) {
+              setSettings(prev => ({ ...prev, ...updatedSettings }));
+              const userKeys = getUserStorageKeys(updatedUser.id);
+              saveStorage(userKeys.SETTINGS, { ...settings, ...updatedSettings });
+            }
+            setScreen("dash");
+            if (settings.haptic) triggerHaptic("success");
+          }}
+          onSkipAll={() => {
+            setScreen("dash");
+          }}
+        />
+      </div>
+    );
+  }
+
   const isAuthScreen = ["user_select", "auth", "register", "forgot_password", "lock"].includes(screen);
 
   if (!isAuthScreen) {
@@ -6095,6 +6341,7 @@ export default function KharchaApp() {
           onDeleteExpense={deleteExpense}
           onBulkDeleteExpenses={handleBulkDeleteExpenses}
           onUpdateSettings={handleUpdateSettings}
+          onUpdateUser={handleUpdateUser}
           onSwitchUser={() => setScreen("user_select")}
           onSignOut={() => setScreen("user_select")}
           onSwitchToDesktopMode={() => {

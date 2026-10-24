@@ -22,6 +22,7 @@ interface AuthScreenProps {
   }) => void;
   onSwitchToProfiles: () => void;
   isDesktop?: boolean;
+  theme?: "dark" | "light";
 }
 
 export default function AuthScreen({
@@ -29,7 +30,9 @@ export default function AuthScreen({
   onSuccess,
   onSwitchToProfiles,
   isDesktop = false,
+  theme = "dark",
 }: AuthScreenProps) {
+  const isLight = theme === "light";
   const [mode, setMode] = useState<AuthMode>(initialMode);
 
   // Form Fields
@@ -41,6 +44,10 @@ export default function AuthScreen({
   const [resetCode, setResetCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [countryCode, setCountryCode] = useState("+91");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState<"terms" | "privacy" | null>(null);
 
   // UI State
   const [showPassword, setShowPassword] = useState(false);
@@ -98,6 +105,17 @@ export default function AuthScreen({
       setErrorMessage("Please enter a valid email address.");
       return;
     }
+    if (phoneNumber.trim()) {
+      const cleanPhone = phoneNumber.replace(/[\s\-().]/g, "");
+      if (cleanPhone.length < 7 || cleanPhone.length > 15 || !/^[0-9]+$/.test(cleanPhone)) {
+        setErrorMessage("Please enter a valid mobile number (e.g. 9876543210).");
+        return;
+      }
+    }
+    if (!agreedToTerms) {
+      setErrorMessage("Please agree to the Terms of Service & Privacy Policy to continue.");
+      return;
+    }
     if (!regStrength.checks.length) {
       setErrorMessage("Password must be at least 8 characters long.");
       return;
@@ -119,6 +137,9 @@ export default function AuthScreen({
       email: email.trim(),
       password,
       confirmPassword,
+      phoneNumber: phoneNumber.trim() ? `${countryCode}${phoneNumber.trim().replace(/^0+/, "")}` : undefined,
+      countryCode,
+      agreedToTerms,
     });
 
     setIsLoading(false);
@@ -327,7 +348,9 @@ export default function AuthScreen({
       style={{
         minHeight: "100%",
         width: "100%",
-        background: "linear-gradient(160deg, #09090e 0%, #0f0f18 55%, #0b0b12 100%)",
+        background: isLight 
+          ? "linear-gradient(160deg, #F8F9FD 0%, #FFFFFF 50%, #F4F5FA 100%)" 
+          : "linear-gradient(160deg, #09090e 0%, #0f0f18 55%, #0b0b12 100%)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -341,12 +364,14 @@ export default function AuthScreen({
         style={{
           width: "100%",
           maxWidth: 440,
-          background: "rgba(22, 22, 34, 0.75)",
+          background: isLight ? "#FFFFFF" : "rgba(22, 22, 34, 0.75)",
           backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
           borderRadius: 28,
-          border: "1px solid rgba(255, 255, 255, 0.08)",
-          boxShadow: "0 24px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(239, 159, 39, 0.05)",
+          border: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
+          boxShadow: isLight 
+            ? "0 24px 60px rgba(0, 0, 0, 0.07), 0 2px 8px rgba(0, 0, 0, 0.04)" 
+            : "0 24px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(239, 159, 39, 0.05)",
           padding: isDesktop ? "36px 32px" : "28px 22px",
           boxSizing: "border-box",
           position: "relative",
@@ -362,7 +387,9 @@ export default function AuthScreen({
             width: 140,
             height: 140,
             borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(239, 159, 39, 0.25) 0%, transparent 70%)",
+            background: isLight
+              ? "radial-gradient(circle, rgba(217, 119, 6, 0.12) 0%, transparent 70%)"
+              : "radial-gradient(circle, rgba(239, 159, 39, 0.25) 0%, transparent 70%)",
             pointerEvents: "none",
           }}
         />
@@ -375,13 +402,17 @@ export default function AuthScreen({
               height: 52,
               borderRadius: 16,
               margin: "0 auto 12px",
-              background: "linear-gradient(135deg, rgba(239, 159, 39, 0.25), rgba(216, 90, 48, 0.15))",
-              border: "1.5px solid rgba(239, 159, 39, 0.35)",
+              background: isLight
+                ? "linear-gradient(135deg, rgba(217, 119, 6, 0.15), rgba(234, 88, 12, 0.1))"
+                : "linear-gradient(135deg, rgba(239, 159, 39, 0.25), rgba(216, 90, 48, 0.15))",
+              border: `1.5px solid ${isLight ? "rgba(217, 119, 6, 0.3)" : "rgba(239, 159, 39, 0.35)"}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontSize: 26,
-              boxShadow: "0 8px 24px rgba(239, 159, 39, 0.2)",
+              boxShadow: isLight
+                ? "0 8px 20px rgba(217, 119, 6, 0.15)"
+                : "0 8px 24px rgba(239, 159, 39, 0.2)",
             }}
           >
             🪙
@@ -402,7 +433,7 @@ export default function AuthScreen({
             style={{
               fontSize: 22,
               fontWeight: 800,
-              color: "#ffffff",
+              color: isLight ? "#111827" : "#ffffff",
               margin: 0,
               letterSpacing: "-0.02em",
             }}
@@ -413,7 +444,7 @@ export default function AuthScreen({
             {mode === "forgot" && "Reset Password"}
             {mode === "reset" && "Set New Password"}
           </h2>
-          <p style={{ fontSize: 13, color: "rgba(255, 255, 255, 0.45)", marginTop: 6, marginBottom: 0 }}>
+          <p style={{ fontSize: 13, color: isLight ? "#4B5563" : "rgba(255, 255, 255, 0.45)", marginTop: 6, marginBottom: 0 }}>
             {mode === "login" && "Enter your registered email and password"}
             {mode === "register" && "Register as a new user to track your finances"}
             {mode === "verify" && `Enter the 6-digit code sent to ${email}`}
@@ -564,7 +595,7 @@ export default function AuthScreen({
             </button>
 
             <div style={{ textAlign: "center", marginTop: 8 }}>
-              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.45)" }}>
+              <span style={{ fontSize: 13, color: isLight ? "#4B5563" : "rgba(255,255,255,0.45)" }}>
                 Don't have an account?{" "}
               </span>
               <button
@@ -618,6 +649,47 @@ export default function AuthScreen({
                   style={inputStyle}
                   autoComplete="email"
                 />
+              </div>
+            </div>
+
+            <div>
+              <label style={labelStyle}>
+                Mobile Number <span style={{ opacity: 0.5, fontWeight: 400 }}>(Optional for SMS Sync)</span>
+              </label>
+              <div style={{ display: "flex", gap: 8 }}>
+                <select
+                  value={countryCode}
+                  onChange={(e) => setCountryCode(e.target.value)}
+                  style={{
+                    ...inputStyle,
+                    width: 105,
+                    padding: "10px 8px",
+                    background: isLight ? "#F3F4F6" : "rgba(255,255,255,0.06)",
+                    cursor: "pointer",
+                    fontWeight: 700,
+                    borderRadius: 14,
+                    border: "1px solid var(--token-border, rgba(0, 0, 0, 0.1))",
+                  }}
+                >
+                  <option value="+91">🇮🇳 +91</option>
+                  <option value="+1">🇺🇸 +1</option>
+                  <option value="+44">🇬🇧 +44</option>
+                  <option value="+971">🇦🇪 +971</option>
+                  <option value="+65">🇸🇬 +65</option>
+                  <option value="+61">🇦🇺 +61</option>
+                  <option value="+49">🇩🇪 +49</option>
+                </select>
+                <div style={{ ...inputContainerStyle, flex: 1 }}>
+                  <span style={{ fontSize: 15, opacity: 0.5 }}>📱</span>
+                  <input
+                    type="tel"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9\s\-]/g, ""))}
+                    placeholder="98765 43210"
+                    style={inputStyle}
+                    autoComplete="tel"
+                  />
+                </div>
               </div>
             </div>
 
@@ -702,12 +774,47 @@ export default function AuthScreen({
               )}
             </div>
 
+            {/* Terms and Privacy Checkbox */}
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 4 }}>
+              <input
+                type="checkbox"
+                id="terms_agree"
+                checked={agreedToTerms}
+                onChange={(e) => setAgreedToTerms(e.target.checked)}
+                style={{
+                  width: 18,
+                  height: 18,
+                  accentColor: TOKEN.amber,
+                  cursor: "pointer",
+                  marginTop: 2,
+                }}
+              />
+              <label htmlFor="terms_agree" style={{ fontSize: 12, lineHeight: 1.4, color: isLight ? "#4B5563" : "rgba(255,255,255,0.7)", cursor: "pointer" }}>
+                I agree to the{" "}
+                <button
+                  type="button"
+                  onClick={() => setShowTermsModal("terms")}
+                  style={{ background: "none", border: "none", color: TOKEN.amber, fontWeight: 700, padding: 0, cursor: "pointer", textDecoration: "underline" }}
+                >
+                  Terms of Service
+                </button>{" "}
+                and{" "}
+                <button
+                  type="button"
+                  onClick={() => setShowTermsModal("privacy")}
+                  style={{ background: "none", border: "none", color: TOKEN.amber, fontWeight: 700, padding: 0, cursor: "pointer", textDecoration: "underline" }}
+                >
+                  Privacy Policy
+                </button>.
+              </label>
+            </div>
+
             <button type="submit" disabled={isLoading} style={primaryButtonStyle}>
               {isLoading ? "Creating Account..." : "Create Account →"}
             </button>
 
             <div style={{ textAlign: "center", marginTop: 6 }}>
-              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.45)" }}>
+              <span style={{ fontSize: 13, color: isLight ? "#4B5563" : "rgba(255,255,255,0.45)" }}>
                 Already registered?{" "}
               </span>
               <button
@@ -776,7 +883,7 @@ export default function AuthScreen({
                 style={{
                   background: "none",
                   border: "none",
-                  color: "rgba(255,255,255,0.5)",
+                  color: isLight ? "#4B5563" : "rgba(255,255,255,0.5)",
                   fontSize: 12,
                   cursor: "pointer",
                   padding: 0,
@@ -818,7 +925,7 @@ export default function AuthScreen({
                 style={{
                   background: "none",
                   border: "none",
-                  color: "rgba(255,255,255,0.5)",
+                  color: isLight ? "#4B5563" : "rgba(255,255,255,0.5)",
                   fontSize: 12.5,
                   cursor: "pointer",
                   padding: 0,
@@ -931,7 +1038,7 @@ export default function AuthScreen({
           style={{
             marginTop: 24,
             paddingTop: 18,
-            borderTop: "1px solid rgba(255, 255, 255, 0.08)",
+            borderTop: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
             textAlign: "center",
           }}
         >
@@ -939,9 +1046,9 @@ export default function AuthScreen({
             type="button"
             onClick={onSwitchToProfiles}
             style={{
-              background: "rgba(255, 255, 255, 0.04)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              color: "rgba(255, 255, 255, 0.7)",
+              background: isLight ? "#F3F4F6" : "rgba(255, 255, 255, 0.04)",
+              border: isLight ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid rgba(255, 255, 255, 0.08)",
+              color: isLight ? "#374151" : "rgba(255, 255, 255, 0.7)",
               borderRadius: 12,
               padding: "10px 16px",
               fontSize: 12.5,
@@ -953,14 +1060,14 @@ export default function AuthScreen({
               transition: "all 0.2s",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
-              e.currentTarget.style.borderColor = "rgba(239, 159, 39, 0.3)";
+              e.currentTarget.style.background = isLight ? "#E5E7EB" : "rgba(255, 255, 255, 0.08)";
+              e.currentTarget.style.borderColor = TOKEN.amber;
               e.currentTarget.style.color = TOKEN.amber;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(255, 255, 255, 0.04)";
-              e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.08)";
-              e.currentTarget.style.color = "rgba(255, 255, 255, 0.7)";
+              e.currentTarget.style.background = isLight ? "#F3F4F6" : "rgba(255, 255, 255, 0.04)";
+              e.currentTarget.style.borderColor = isLight ? "rgba(0, 0, 0, 0.08)" : "rgba(255, 255, 255, 0.08)";
+              e.currentTarget.style.color = isLight ? "#374151" : "rgba(255, 255, 255, 0.7)";
             }}
           >
             <span>👥</span>
@@ -968,6 +1075,98 @@ export default function AuthScreen({
           </button>
         </div>
       </div>
+
+      {/* Terms of Service & Privacy Policy Modal */}
+      {showTermsModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.75)",
+            backdropFilter: "blur(8px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: 20,
+          }}
+          onClick={() => setShowTermsModal(null)}
+        >
+          <div
+            style={{
+              background: isLight ? "#FFFFFF" : "#18181B",
+              color: isLight ? "#111827" : "#F3F4F6",
+              borderRadius: 20,
+              padding: 24,
+              maxWidth: 520,
+              width: "100%",
+              maxHeight: "80vh",
+              overflowY: "auto",
+              boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
+              border: `1px solid ${isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)"}`,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
+                {showTermsModal === "terms" ? "📜 Terms of Service" : "🛡️ Privacy Policy"}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowTermsModal(null)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: 18,
+                  cursor: "pointer",
+                  color: isLight ? "#6B7280" : "#9CA3AF",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <div style={{ fontSize: 13, lineHeight: 1.6, color: isLight ? "#4B5563" : "#D1D5DB" }}>
+              {showTermsModal === "terms" ? (
+                <>
+                  <p><strong>1. Introduction</strong>: Welcome to KHARCHA. By creating an account or using our application, you agree to these Terms.</p>
+                  <p><strong>2. Account & Security</strong>: You are responsible for safeguarding your credentials and PIN. We use industry-standard scrypt cryptographic hashing.</p>
+                  <p><strong>3. Expense Tracking & Financial Privacy</strong>: KHARCHA is designed for personal expense tracking. We do not require or store your net banking passwords, UPI PINs, or debit card numbers.</p>
+                  <p><strong>4. Local & Offline Operation</strong>: Your data is isolated per account. You retain full ownership and rights to your data.</p>
+                  <p><strong>5. Data Deletion</strong>: You may delete your account at any time, which permanently purges all transactions and records.</p>
+                </>
+              ) : (
+                <>
+                  <p><strong>1. Zero Banking Credential Policy</strong>: We NEVER ask for or store your bank passwords, UPI PINs, OTPs, or CVVs.</p>
+                  <p><strong>2. Transparent SMS Parsing</strong>: Automatic transaction tracking is performed locally on supported devices with explicit user consent to detect transactional debit alerts.</p>
+                  <p><strong>3. Data Isolation</strong>: Every user's transactions, categories, and settings are strictly partitioned in our ACID-compliant enterprise database.</p>
+                  <p><strong>4. Portability & Export</strong>: You can export your full transaction ledger anytime as standard JSON.</p>
+                </>
+              )}
+            </div>
+            <div style={{ marginTop: 20, textAlign: "right" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setAgreedToTerms(true);
+                  setShowTermsModal(null);
+                }}
+                style={{
+                  padding: "10px 18px",
+                  borderRadius: 12,
+                  border: "none",
+                  background: TOKEN.amber,
+                  color: "#ffffff",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                I Understand & Agree
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -977,7 +1176,7 @@ const labelStyle: React.CSSProperties = {
   display: "block",
   fontSize: 11.5,
   fontWeight: 600,
-  color: "rgba(255, 255, 255, 0.65)",
+  color: "var(--token-textFaint, #4B5563)",
   marginBottom: 6,
   textTransform: "uppercase",
   letterSpacing: "0.06em",
@@ -987,8 +1186,8 @@ const inputContainerStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: 10,
-  background: "rgba(0, 0, 0, 0.35)",
-  border: "1px solid rgba(255, 255, 255, 0.12)",
+  background: "var(--token-surfaceHighlight, #F9FAFB)",
+  border: "1px solid var(--token-border, rgba(0, 0, 0, 0.1))",
   borderRadius: 14,
   padding: "10px 14px",
   transition: "border-color 0.2s, box-shadow 0.2s",
@@ -999,7 +1198,7 @@ const inputStyle: React.CSSProperties = {
   background: "transparent",
   border: "none",
   outline: "none",
-  color: "#ffffff",
+  color: "var(--token-text, #111827)",
   fontSize: 14,
   fontFamily: "inherit",
 };
@@ -1019,13 +1218,13 @@ const primaryButtonStyle: React.CSSProperties = {
   width: "100%",
   padding: "13px 18px",
   borderRadius: 14,
-  border: "1px solid rgba(239, 159, 39, 0.4)",
-  background: "linear-gradient(135deg, #EF9F27 0%, #D85A30 100%)",
-  color: "#1a0800",
+  border: "none",
+  background: "linear-gradient(135deg, #D97706 0%, #EA580C 100%)",
+  color: "#ffffff",
   fontWeight: 800,
   fontSize: 14,
   cursor: "pointer",
-  boxShadow: "0 6px 20px rgba(239, 159, 39, 0.28)",
+  boxShadow: "0 6px 20px rgba(217, 119, 6, 0.28)",
   transition: "transform 0.15s, box-shadow 0.15s",
   marginTop: 4,
 };
@@ -1035,7 +1234,7 @@ const pillStyle = (active: boolean): React.CSSProperties => ({
   fontWeight: 600,
   padding: "2px 7px",
   borderRadius: 6,
-  background: active ? "rgba(16, 185, 129, 0.15)" : "rgba(255, 255, 255, 0.05)",
-  color: active ? "#86efac" : "rgba(255, 255, 255, 0.3)",
-  border: `1px solid ${active ? "rgba(16, 185, 129, 0.3)" : "rgba(255, 255, 255, 0.06)"}`,
+  background: active ? "rgba(16, 185, 129, 0.15)" : "var(--token-surfaceHighlight, rgba(0,0,0,0.05))",
+  color: active ? "#059669" : "var(--token-muted, #6B7280)",
+  border: `1px solid ${active ? "rgba(16, 185, 129, 0.3)" : "var(--token-border, rgba(0,0,0,0.06))"}`,
 });

@@ -377,5 +377,13 @@ input {
 .theme-light input::placeholder {
   color: #8E8E9E !important;
 }
+.theme-light select,
+.theme-light textarea {
+  color: #181824 !important;
+}
+.theme-light select option {
+  background: #FFFFFF !important;
+  color: #181824 !important;
+}
 
 

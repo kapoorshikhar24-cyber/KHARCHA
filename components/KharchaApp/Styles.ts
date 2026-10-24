@@ -26,6 +26,7 @@ export const TOKEN = {
   heroBg: "var(--token-heroBg)",
   kpiBg: "var(--token-kpiBg)",
   phoneBezel: "var(--token-phoneBezel)",
+  glass: "var(--token-glass)",
   mono: "'JetBrains Mono', monospace",
 };
 
@@ -36,6 +37,7 @@ export const S: { [key: string]: CSSProperties } = {
     alignItems: "center",
     minHeight: "100vh",
     background: TOKEN.bg,
+    color: TOKEN.text,
     padding: 16,
   },
   phone: {
@@ -137,8 +139,8 @@ export const S: { [key: string]: CSSProperties } = {
     alignItems: "center",
     flexShrink: 0,
   },
-  statusTime: { color: "#D8D6CE", fontSize: 12, fontWeight: 500, fontFamily: "monospace" },
-  notch: { width: 80, height: 14, background: TOKEN.surface, borderRadius: 20, border: "0.5px solid #28283A" },
+  statusTime: { color: TOKEN.text, fontSize: 12, fontWeight: 500, fontFamily: "monospace" },
+  notch: { width: 80, height: 14, background: TOKEN.surfaceHighlight, borderRadius: 20, border: `0.5px solid ${TOKEN.border}` },
   homeBar: { padding: "8px 0 14px", display: "flex", justifyContent: "center", flexShrink: 0, background: TOKEN.phone },
   homeIndicator: { width: 100, height: 4, background: TOKEN.border, borderRadius: 2 },
   body: { flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" },

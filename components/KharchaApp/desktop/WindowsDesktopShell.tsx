@@ -37,6 +37,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import SmsTrackingModal from "../SmsTrackingModal";
 
 interface WindowsDesktopShellProps {
   user: UserProfile;
@@ -73,6 +74,8 @@ export default function WindowsDesktopShell({
   onSignOut,
   onSwitchToWebMode,
 }: WindowsDesktopShellProps) {
+  const isLight = settings.theme === "light";
+
   // Navigation State
   const [activeSection, setActiveSection] = useState<
     "overview" | "transactions" | "wallets" | "budgets" | "reports" | "settings"
@@ -88,6 +91,8 @@ export default function WindowsDesktopShell({
   const [quickWallet, setQuickWallet] = useState<string>("cash");
   const [quickNote, setQuickNote] = useState<string>("");
   const [quickType, setQuickType] = useState<"expense" | "income">("expense");
+  const [quickDate, setQuickDate] = useState<string>(todayKey());
+  const [smsModalOpen, setSmsModalOpen] = useState(false);
   const amountInputRef = useRef<HTMLInputElement>(null);
 
   // Desktop Ledger State
@@ -302,7 +307,7 @@ export default function WindowsDesktopShell({
       walletId: quickWallet,
       note: quickNote.trim(),
       type: quickType,
-      createdAt: new Date().toISOString(),
+      createdAt: quickDate ? new Date(quickDate + "T12:00:00").toISOString() : new Date().toISOString(),
     });
 
     // Windows Desktop Notification
@@ -315,6 +320,7 @@ export default function WindowsDesktopShell({
 
     setQuickAmount("");
     setQuickNote("");
+    setQuickDate(todayKey());
     triggerHaptic("success");
     amountInputRef.current?.focus();
   };
@@ -412,8 +418,8 @@ export default function WindowsDesktopShell({
         flexDirection: "column",
         height: "100vh",
         width: "100vw",
-        background: "#0a0a10",
-        color: "#ffffff",
+        background: TOKEN.bg,
+        color: TOKEN.text,
         fontFamily: "'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif",
         overflow: "hidden",
         userSelect: "none",
@@ -423,8 +429,8 @@ export default function WindowsDesktopShell({
       <div
         style={{
           height: 36,
-          background: "rgba(14, 14, 22, 0.95)",
-          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+          background: TOKEN.titleBarBg,
+          borderBottom: `1px solid ${TOKEN.borderSub}`,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -436,7 +442,7 @@ export default function WindowsDesktopShell({
         {/* App Title & Sync Status */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, ...({ WebkitAppRegion: "no-drag" } as React.CSSProperties) }}>
           <span style={{ fontSize: 16 }}>🪙</span>
-          <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.02em", color: "rgba(255,255,255,0.9)" }}>
+          <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.02em", color: TOKEN.text }}>
             KHARCHA Enterprise — Windows Desktop
           </span>
           <div
@@ -459,13 +465,63 @@ export default function WindowsDesktopShell({
 
         {/* Window Chrome Buttons (Minimize, Maximize, Close) */}
         <div style={{ display: "flex", height: "100%", ...({ WebkitAppRegion: "no-drag" } as React.CSSProperties) }}>
+          {/* SMS Sync Button */}
+          <button
+            onClick={() => setSmsModalOpen(true)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              background: "rgba(16, 185, 129, 0.12)",
+              border: `1px solid rgba(16, 185, 129, 0.35)`,
+              color: isLight ? "#059669" : "#10b981",
+              margin: "auto 4px",
+              padding: "3px 9px",
+              borderRadius: 6,
+              fontSize: 11,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+            title="Automatic Bank SMS Tracking & Android Sync"
+          >
+            <span>📱</span>
+            <span>SMS Sync</span>
+          </button>
+
+          {/* Theme Toggle Button */}
+          <button
+            id="desktop-theme-toggle"
+            onClick={() => {
+              const next = settings.theme === "light" ? "dark" : "light";
+              onUpdateSettings({ theme: next });
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              background: isLight ? "rgba(0, 0, 0, 0.06)" : "rgba(255, 255, 255, 0.08)",
+              border: `1px solid ${TOKEN.border}`,
+              color: TOKEN.text,
+              margin: "auto 6px",
+              padding: "3px 10px",
+              borderRadius: 6,
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+            title={settings.theme === "light" ? "Switch to Dark Mode" : "Switch to Light Mode"}
+          >
+            <span>{settings.theme === "light" ? "🌙" : "☀️"}</span>
+            <span>{settings.theme === "light" ? "Dark" : "Light"}</span>
+          </button>
+
           <button
             onClick={onSwitchToWebMode}
             style={{
               background: "none",
               border: "none",
-              color: "rgba(255,255,255,0.5)",
-              padding: "0 14px",
+              color: TOKEN.muted,
+              padding: "0 12px",
               fontSize: 11,
               cursor: "pointer",
             }}
@@ -504,8 +560,8 @@ export default function WindowsDesktopShell({
         <aside
           style={{
             width: 210,
-            background: "rgba(13, 13, 20, 0.9)",
-            borderRight: "1px solid rgba(255, 255, 255, 0.06)",
+            background: TOKEN.sidebarBg,
+            borderRight: `1px solid ${TOKEN.borderSub}`,
             display: "flex",
             flexDirection: "column",
             padding: "12px 8px",
@@ -536,8 +592,8 @@ export default function WindowsDesktopShell({
                   padding: "9px 12px",
                   borderRadius: 8,
                   border: "none",
-                  background: active ? "rgba(239, 159, 39, 0.14)" : "transparent",
-                  color: active ? TOKEN.amber : "rgba(255, 255, 255, 0.75)",
+                  background: active ? (isLight ? "rgba(217, 119, 6, 0.12)" : "rgba(239, 159, 39, 0.14)") : "transparent",
+                  color: active ? TOKEN.amber : TOKEN.muted,
                   fontWeight: active ? 700 : 500,
                   fontSize: 12.5,
                   cursor: "pointer",
@@ -549,7 +605,7 @@ export default function WindowsDesktopShell({
                   <span>{item.label}</span>
                 </div>
                 {item.hotkey && (
-                  <span style={{ fontSize: 9.5, opacity: 0.4, fontFamily: "monospace" }}>{item.hotkey}</span>
+                  <span style={{ fontSize: 9.5, opacity: 0.5, fontFamily: "monospace" }}>{item.hotkey}</span>
                 )}
               </button>
             );
@@ -562,8 +618,8 @@ export default function WindowsDesktopShell({
             style={{
               padding: "10px 12px",
               borderRadius: 10,
-              background: "rgba(255, 255, 255, 0.03)",
-              border: "1px solid rgba(255, 255, 255, 0.05)",
+              background: TOKEN.surfaceHighlight,
+              border: `1px solid ${TOKEN.borderSub}`,
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
@@ -591,7 +647,7 @@ export default function WindowsDesktopShell({
                 )}
               </div>
               <div style={{ overflow: "hidden" }}>
-                <div style={{ fontSize: 12, fontWeight: 700, textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <div style={{ fontSize: 12, fontWeight: 700, textOverflow: "ellipsis", whiteSpace: "nowrap", color: TOKEN.text }}>
                   {user.name}
                 </div>
               </div>
@@ -657,8 +713,8 @@ export default function WindowsDesktopShell({
                   {/* 14-Day Cash Flow Trend Chart */}
                   <div style={{ ...desktopCard, height: 210, display: "flex", flexDirection: "column" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700 }}>14-Day Cash Flow Velocity</span>
-                      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Expenses vs Income</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: TOKEN.text }}>14-Day Cash Flow Velocity</span>
+                      <span style={{ fontSize: 11, color: TOKEN.muted }}>Expenses vs Income</span>
                     </div>
                     <div style={{ flex: 1, width: "100%" }}>
                       <ResponsiveContainer width="100%" height="100%">
@@ -669,14 +725,15 @@ export default function WindowsDesktopShell({
                               <stop offset="95%" stopColor="#EF9F27" stopOpacity={0} />
                             </linearGradient>
                           </defs>
-                          <XAxis dataKey="date" stroke="rgba(255,255,255,0.3)" fontSize={10} />
-                          <YAxis stroke="rgba(255,255,255,0.3)" fontSize={10} />
+                          <XAxis dataKey="date" stroke={isLight ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.3)"} fontSize={10} />
+                          <YAxis stroke={isLight ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.3)"} fontSize={10} />
                           <Tooltip
                             contentStyle={{
-                              background: "rgba(16,16,24,0.95)",
-                              borderColor: "rgba(255,255,255,0.1)",
+                              background: isLight ? "#FFFFFF" : "rgba(16,16,24,0.95)",
+                              borderColor: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)",
                               borderRadius: 8,
                               fontSize: 11,
+                              color: isLight ? "#181822" : "#FFFFFF",
                             }}
                           />
                           <Area type="monotone" dataKey="expense" stroke="#EF9F27" fillOpacity={1} fill="url(#colorExpense)" />
@@ -688,7 +745,7 @@ export default function WindowsDesktopShell({
                   {/* Dense Recent Transaction Table */}
                   <div style={{ ...desktopCard, flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <span style={{ fontSize: 13, fontWeight: 700 }}>Ledger Quick Access</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: TOKEN.text }}>Ledger Quick Access</span>
                       <button
                         onClick={() => setActiveSection("transactions")}
                         style={{
@@ -706,7 +763,7 @@ export default function WindowsDesktopShell({
                     <div style={{ flex: 1, overflowY: "auto" }}>
                       <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                         <thead>
-                          <tr style={{ color: "rgba(255,255,255,0.4)", borderBottom: "1px solid rgba(255,255,255,0.08)", textAlign: "left" }}>
+                          <tr style={{ color: TOKEN.muted, borderBottom: `1px solid ${TOKEN.borderSub}`, textAlign: "left" }}>
                             <th style={{ padding: "6px 8px" }}>Date</th>
                             <th style={{ padding: "6px 8px" }}>Category</th>
                             <th style={{ padding: "6px 8px" }}>Note</th>
@@ -718,21 +775,21 @@ export default function WindowsDesktopShell({
                           {expenses.slice(0, 10).map((tx) => {
                             const cat = categories.find((c) => c.id === tx.category);
                             return (
-                              <tr key={tx.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
-                                <td style={{ padding: "6px 8px", color: "rgba(255,255,255,0.5)" }}>
+                              <tr key={tx.id} style={{ borderBottom: `1px solid ${TOKEN.borderSub}` }}>
+                                <td style={{ padding: "6px 8px", color: TOKEN.muted }}>
                                   {new Date(tx.createdAt).toLocaleDateString()}
                                 </td>
-                                <td style={{ padding: "6px 8px" }}>
+                                <td style={{ padding: "6px 8px", color: TOKEN.text }}>
                                   {cat?.icon} {cat?.label || tx.category}
                                 </td>
-                                <td style={{ padding: "6px 8px", color: "rgba(255,255,255,0.8)" }}>{tx.note || "—"}</td>
-                                <td style={{ padding: "6px 8px", color: "rgba(255,255,255,0.5)" }}>{tx.walletId || "Cash"}</td>
+                                <td style={{ padding: "6px 8px", color: TOKEN.text }}>{tx.note || "—"}</td>
+                                <td style={{ padding: "6px 8px", color: TOKEN.muted }}>{tx.walletId || "Cash"}</td>
                                 <td
                                   style={{
                                     padding: "6px 8px",
                                     textAlign: "right",
                                     fontWeight: 700,
-                                    color: tx.type === "income" ? "#10b981" : "#ffffff",
+                                    color: tx.type === "income" ? TOKEN.success : TOKEN.text,
                                   }}
                                 >
                                   {tx.type === "income" ? "+" : "-"}
@@ -752,11 +809,11 @@ export default function WindowsDesktopShell({
                   {/* Persistent Quick Add Panel */}
                   <div style={desktopCard}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, display: "flex", alignItems: "center", gap: 6, color: TOKEN.text }}>
                         <span>⚡</span>
                         <span>Quick Add Expense</span>
                       </div>
-                      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.4)", fontFamily: "monospace" }}>Ctrl+N</span>
+                      <span style={{ fontSize: 10, color: TOKEN.muted, fontFamily: "monospace" }}>Ctrl+N</span>
                     </div>
 
                     <form onSubmit={handleQuickAddSubmit} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -776,7 +833,7 @@ export default function WindowsDesktopShell({
                               fontWeight: 800,
                               padding: "8px 12px",
                               borderRadius: 8,
-                              background: "rgba(0,0,0,0.4)",
+                              background: TOKEN.surfaceElevated,
                               border: "1px solid rgba(239, 159, 39, 0.4)",
                               color: TOKEN.amber,
                               boxSizing: "border-box",
@@ -815,9 +872,9 @@ export default function WindowsDesktopShell({
                                 flex: 1,
                                 padding: "3px 0",
                                 borderRadius: 6,
-                                border: "1px solid rgba(255,255,255,0.08)",
-                                background: "rgba(255,255,255,0.04)",
-                                color: "rgba(255,255,255,0.6)",
+                                border: `1px solid ${TOKEN.borderSub}`,
+                                background: TOKEN.surfaceHighlight,
+                                color: TOKEN.text,
                                 fontSize: 10.5,
                                 cursor: "pointer",
                               }}
@@ -865,13 +922,73 @@ export default function WindowsDesktopShell({
                           width: "100%",
                           padding: "6px 10px",
                           borderRadius: 8,
-                          background: "rgba(0,0,0,0.3)",
-                          border: "1px solid rgba(255,255,255,0.08)",
-                          color: "#fff",
+                          background: TOKEN.surfaceElevated,
+                          border: `1px solid ${TOKEN.border}`,
+                          color: TOKEN.text,
                           fontSize: 12,
                           boxSizing: "border-box",
                         }}
                       />
+
+                      {/* Date (Past Date Selection) */}
+                      <div>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
+                          <span style={{ fontSize: 10, color: TOKEN.muted, textTransform: "uppercase", fontWeight: 700 }}>Date</span>
+                          <div style={{ display: "flex", gap: 4 }}>
+                            <button
+                              type="button"
+                              onClick={() => setQuickDate(todayKey())}
+                              style={{
+                                padding: "1px 6px",
+                                borderRadius: 4,
+                                border: `1px solid ${quickDate === todayKey() ? TOKEN.amber : TOKEN.borderSub}`,
+                                background: quickDate === todayKey() ? "rgba(239, 159, 39, 0.15)" : TOKEN.surfaceHighlight,
+                                color: quickDate === todayKey() ? TOKEN.amber : TOKEN.muted,
+                                fontSize: 9.5,
+                                fontWeight: 600,
+                                cursor: "pointer",
+                              }}
+                            >
+                              Today
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const d = new Date();
+                                d.setDate(d.getDate() - 1);
+                                setQuickDate(d.toISOString().slice(0, 10));
+                              }}
+                              style={{
+                                padding: "1px 6px",
+                                borderRadius: 4,
+                                border: `1px solid ${TOKEN.borderSub}`,
+                                background: TOKEN.surfaceHighlight,
+                                color: TOKEN.muted,
+                                fontSize: 9.5,
+                                fontWeight: 600,
+                                cursor: "pointer",
+                              }}
+                            >
+                              Yesterday
+                            </button>
+                          </div>
+                        </div>
+                        <input
+                          type="date"
+                          value={quickDate}
+                          onChange={(e) => setQuickDate(e.target.value)}
+                          style={{
+                            width: "100%",
+                            padding: "5px 8px",
+                            borderRadius: 6,
+                            background: TOKEN.surfaceElevated,
+                            border: `1px solid ${TOKEN.border}`,
+                            color: TOKEN.text,
+                            fontSize: 11.5,
+                            boxSizing: "border-box",
+                          }}
+                        />
+                      </div>
 
                       <button
                         type="submit"
@@ -894,10 +1011,10 @@ export default function WindowsDesktopShell({
 
                   {/* Category Donut */}
                   <div style={{ ...desktopCard, flex: 1, display: "flex", flexDirection: "column" }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Category Breakdown</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6, color: TOKEN.text }}>Category Breakdown</div>
                     <div style={{ flex: 1, width: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
                       {categoryData.length === 0 ? (
-                        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.3)" }}>No expenses recorded this month</div>
+                        <div style={{ fontSize: 11, color: TOKEN.muted }}>No expenses recorded this month</div>
                       ) : (
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
@@ -917,10 +1034,11 @@ export default function WindowsDesktopShell({
                             </Pie>
                             <Tooltip
                               contentStyle={{
-                                background: "rgba(16,16,24,0.95)",
-                                borderColor: "rgba(255,255,255,0.1)",
+                                background: isLight ? "#FFFFFF" : "rgba(16,16,24,0.95)",
+                                borderColor: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)",
                                 borderRadius: 8,
                                 fontSize: 11,
+                                color: isLight ? "#181822" : "#FFFFFF",
                               }}
                             />
                           </PieChart>
@@ -947,9 +1065,9 @@ export default function WindowsDesktopShell({
                       style={{
                         padding: "6px 12px",
                         borderRadius: 6,
-                        background: "rgba(0,0,0,0.3)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        color: "#fff",
+                        background: TOKEN.surfaceElevated,
+                        border: `1px solid ${TOKEN.border}`,
+                        color: TOKEN.text,
                         fontSize: 12,
                         width: 240,
                       }}
@@ -1008,9 +1126,9 @@ export default function WindowsDesktopShell({
                       style={{
                         padding: "6px 12px",
                         borderRadius: 6,
-                        background: "rgba(255,255,255,0.05)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        color: "#fff",
+                        background: TOKEN.surfaceElevated,
+                        border: `1px solid ${TOKEN.border}`,
+                        color: TOKEN.text,
                         fontSize: 11.5,
                         cursor: "pointer",
                       }}
@@ -1024,7 +1142,7 @@ export default function WindowsDesktopShell({
                 <div style={{ ...desktopCard, flex: 1, overflowY: "auto", minHeight: 0 }}>
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                     <thead>
-                      <tr style={{ color: "rgba(255,255,255,0.4)", borderBottom: "1px solid rgba(255,255,255,0.08)", textAlign: "left" }}>
+                      <tr style={{ color: TOKEN.muted, borderBottom: `1px solid ${TOKEN.borderSub}`, textAlign: "left" }}>
                         <th style={{ padding: "8px 10px", width: 36 }}>
                           <input
                             type="checkbox"
@@ -1051,7 +1169,7 @@ export default function WindowsDesktopShell({
                           <tr
                             key={tx.id}
                             style={{
-                              borderBottom: "1px solid rgba(255,255,255,0.03)",
+                              borderBottom: `1px solid ${TOKEN.borderSub}`,
                               background: isSelected ? "rgba(239, 159, 39, 0.08)" : "transparent",
                             }}
                           >
@@ -1065,14 +1183,22 @@ export default function WindowsDesktopShell({
                                 }}
                               />
                             </td>
-                            <td style={{ padding: "8px 10px", color: "rgba(255,255,255,0.5)" }}>
+                            <td style={{ padding: "8px 10px", color: TOKEN.muted }}>
                               {new Date(tx.createdAt).toLocaleString()}
                             </td>
-                            <td style={{ padding: "8px 10px" }}>
+                            <td style={{ padding: "8px 10px", color: TOKEN.text }}>
                               {cat?.icon} {cat?.label || tx.category}
                             </td>
-                            <td style={{ padding: "8px 10px" }}>{tx.note || "—"}</td>
-                            <td style={{ padding: "8px 10px", color: "rgba(255,255,255,0.6)" }}>
+                            <td style={{ padding: "8px 10px", color: TOKEN.text }}>
+                              <div>{tx.note || "—"}</div>
+                              {tx.syncSource === "bank_sms" && (
+                                <div style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 2, padding: "1px 5px", borderRadius: 4, background: "rgba(16, 185, 129, 0.12)", color: "#10b981", fontSize: 9.5, fontWeight: 700 }}>
+                                  <span>📱 Auto SMS</span>
+                                  {tx.bankName && <span>• {tx.bankName}</span>}
+                                </div>
+                              )}
+                            </td>
+                            <td style={{ padding: "8px 10px", color: TOKEN.muted }}>
                               {tx.walletId || "Cash"}
                             </td>
                             <td
@@ -1080,7 +1206,7 @@ export default function WindowsDesktopShell({
                                 padding: "8px 10px",
                                 textAlign: "right",
                                 fontWeight: 700,
-                                color: tx.type === "income" ? "#10b981" : "#ffffff",
+                                color: tx.type === "income" ? TOKEN.success : TOKEN.text,
                               }}
                             >
                               {tx.type === "income" ? "+" : "-"}
@@ -1142,8 +1268,8 @@ export default function WindowsDesktopShell({
                     const pct = Math.min(100, Math.round((spent / goal) * 100));
 
                     return (
-                      <div key={c.id} style={{ padding: "10px 14px", borderRadius: 8, background: "rgba(255,255,255,0.02)" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
+                      <div key={c.id} style={{ padding: "10px 14px", borderRadius: 8, background: TOKEN.surfaceHighlight }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4, color: TOKEN.text }}>
                           <span>
                             {c.icon} {c.label}
                           </span>
@@ -1151,7 +1277,7 @@ export default function WindowsDesktopShell({
                             {fmt(spent)} / {fmt(goal)} ({pct}%)
                           </span>
                         </div>
-                        <div style={{ height: 5, width: "100%", background: "rgba(255,255,255,0.06)", borderRadius: 3 }}>
+                        <div style={{ height: 5, width: "100%", background: isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.06)", borderRadius: 3 }}>
                           <div
                             style={{
                               height: "100%",
@@ -1177,12 +1303,50 @@ export default function WindowsDesktopShell({
             {/* ── TAB: SETTINGS ────────────────────────────────────────── */}
             {activeSection === "settings" && (
               <div style={{ ...desktopCard, flex: 1, maxWidth: 540 }}>
-                <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700 }}>Windows Application Preferences</h3>
+                <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: TOKEN.text }}>Windows Application Preferences</h3>
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>Launch on Windows Startup</div>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Start KHARCHA minimized in background</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: TOKEN.text }}>Theme (Light / Dark)</div>
+                      <div style={{ fontSize: 11, color: TOKEN.muted }}>Choose light or dark visual mode</div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button
+                        onClick={() => onUpdateSettings({ theme: "dark" })}
+                        style={{
+                          padding: "5px 12px",
+                          borderRadius: 6,
+                          border: settings.theme !== "light" ? `2px solid ${TOKEN.amber}` : `1px solid ${TOKEN.borderSub}`,
+                          background: settings.theme !== "light" ? "rgba(239, 159, 39, 0.12)" : TOKEN.surfaceHighlight,
+                          color: TOKEN.text,
+                          fontSize: 11.5,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        🌙 Dark
+                      </button>
+                      <button
+                        onClick={() => onUpdateSettings({ theme: "light" })}
+                        style={{
+                          padding: "5px 12px",
+                          borderRadius: 6,
+                          border: settings.theme === "light" ? `2px solid ${TOKEN.amber}` : `1px solid ${TOKEN.borderSub}`,
+                          background: settings.theme === "light" ? "rgba(239, 159, 39, 0.12)" : TOKEN.surfaceHighlight,
+                          color: TOKEN.text,
+                          fontSize: 11.5,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        ☀️ Light
+                      </button>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: TOKEN.text }}>Launch on Windows Startup</div>
+                      <div style={{ fontSize: 11, color: TOKEN.muted }}>Start KHARCHA minimized in background</div>
                     </div>
                     <input
                       type="checkbox"
@@ -1199,14 +1363,14 @@ export default function WindowsDesktopShell({
 
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <div>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>Windows Notifications</div>
-                      <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Show toast notifications on expense entry</div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: TOKEN.text }}>Windows Notifications</div>
+                      <div style={{ fontSize: 11, color: TOKEN.muted }}>Show toast notifications on expense entry</div>
                     </div>
                     <span style={{ fontSize: 11, color: "#10b981" }}>Active</span>
                   </div>
 
                   <div>
-                    <label style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>Monthly Budget Target (₹)</label>
+                    <label style={{ fontSize: 11, color: TOKEN.muted }}>Monthly Budget Target (₹)</label>
                     <input
                       type="number"
                       value={settings.monthlyBudget}
@@ -1215,10 +1379,11 @@ export default function WindowsDesktopShell({
                         width: "100%",
                         padding: "8px 10px",
                         borderRadius: 6,
-                        background: "rgba(0,0,0,0.3)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        color: "#fff",
+                        background: TOKEN.surfaceElevated,
+                        border: `1px solid ${TOKEN.border}`,
+                        color: TOKEN.text,
                         marginTop: 4,
+                        boxSizing: "border-box",
                       }}
                     />
                   </div>
@@ -1250,14 +1415,14 @@ export default function WindowsDesktopShell({
       <footer
         style={{
           height: 26,
-          background: "rgba(10, 10, 16, 0.95)",
-          borderTop: "1px solid rgba(255, 255, 255, 0.06)",
+          background: TOKEN.titleBarBg,
+          borderTop: `1px solid ${TOKEN.borderSub}`,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           padding: "0 12px",
           fontSize: 11,
-          color: "rgba(255, 255, 255, 0.5)",
+          color: TOKEN.muted,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -1281,7 +1446,7 @@ export default function WindowsDesktopShell({
             left: 0,
             right: 0,
             bottom: 0,
-            background: "rgba(0,0,0,0.7)",
+            background: isLight ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0.7)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -1289,13 +1454,13 @@ export default function WindowsDesktopShell({
           }}
         >
           <div style={{ ...desktopCard, width: 380, padding: 20 }}>
-            <h4 style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 700 }}>Voice AI Processing</h4>
-            <p style={{ fontSize: 12, color: "rgba(255,255,255,0.6)" }}>{voiceTranscript}</p>
+            <h4 style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 700, color: TOKEN.text }}>Voice AI Processing</h4>
+            <p style={{ fontSize: 12, color: TOKEN.muted }}>{voiceTranscript}</p>
             {voiceParsed && (
-              <div style={{ background: "rgba(255,255,255,0.03)", padding: 12, borderRadius: 8, marginTop: 10 }}>
+              <div style={{ background: TOKEN.surfaceHighlight, padding: 12, borderRadius: 8, marginTop: 10, border: `1px solid ${TOKEN.borderSub}` }}>
                 <div style={{ fontSize: 14, fontWeight: 800, color: TOKEN.amber }}>{fmt(voiceParsed.amount)}</div>
-                <div style={{ fontSize: 12 }}>Category: {voiceParsed.category}</div>
-                <div style={{ fontSize: 12 }}>Wallet: {voiceParsed.walletId}</div>
+                <div style={{ fontSize: 12, color: TOKEN.text }}>Category: {voiceParsed.category}</div>
+                <div style={{ fontSize: 12, color: TOKEN.muted }}>Wallet: {voiceParsed.walletId}</div>
               </div>
             )}
             <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
@@ -1320,10 +1485,10 @@ export default function WindowsDesktopShell({
                 onClick={() => setVoiceModalOpen(false)}
                 style={{
                   padding: "8px 14px",
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.1)",
+                  background: TOKEN.surfaceElevated,
+                  border: `1px solid ${TOKEN.border}`,
                   borderRadius: 6,
-                  color: "#fff",
+                  color: TOKEN.text,
                   cursor: "pointer",
                 }}
               >
@@ -1333,6 +1498,15 @@ export default function WindowsDesktopShell({
           </div>
         </div>
       )}
+
+      {/* ─── AUTOMATIC BANK SMS TRACKING & SIMULATOR MODAL ────────── */}
+      <SmsTrackingModal
+        isOpen={smsModalOpen}
+        onClose={() => setSmsModalOpen(false)}
+        userId={user.id}
+        onAddTransaction={onAddExpense}
+        isLight={isLight}
+      />
     </div>
   );
 }
@@ -1341,7 +1515,7 @@ export default function WindowsDesktopShell({
 const titleBarButtonStyle: React.CSSProperties = {
   background: "none",
   border: "none",
-  color: "rgba(255, 255, 255, 0.7)",
+  color: TOKEN.muted,
   width: 44,
   height: "100%",
   display: "flex",
@@ -1357,27 +1531,31 @@ const titleBarCloseButtonStyle: React.CSSProperties = {
 };
 
 const desktopCard: React.CSSProperties = {
-  background: "rgba(16, 16, 26, 0.75)",
+  background: TOKEN.surface,
   backdropFilter: "blur(20px)",
-  border: "1px solid rgba(255, 255, 255, 0.07)",
+  border: `1px solid ${TOKEN.border}`,
   borderRadius: 12,
   padding: 14,
+  color: TOKEN.text,
+  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
 };
 
 const desktopKpiBox: React.CSSProperties = {
-  background: "rgba(16, 16, 26, 0.75)",
-  border: "1px solid rgba(255, 255, 255, 0.06)",
+  background: TOKEN.surface,
+  border: `1px solid ${TOKEN.borderSub}`,
   borderRadius: 8,
   padding: "8px 12px",
   display: "flex",
   flexDirection: "column",
   gap: 2,
+  color: TOKEN.text,
+  boxShadow: "0 1px 4px rgba(0, 0, 0, 0.03)",
 };
 
 const desktopKpiTitle: React.CSSProperties = {
   fontSize: 10,
   textTransform: "uppercase",
-  color: "rgba(255, 255, 255, 0.4)",
+  color: TOKEN.muted,
   fontWeight: 600,
   letterSpacing: "0.05em",
 };
@@ -1386,13 +1564,15 @@ const desktopKpiVal: React.CSSProperties = {
   fontSize: 16,
   fontWeight: 800,
   letterSpacing: "-0.02em",
+  color: TOKEN.text,
 };
 
 const desktopSelectStyle: React.CSSProperties = {
-  background: "rgba(0,0,0,0.3)",
-  border: "1px solid rgba(255,255,255,0.08)",
+  background: TOKEN.surfaceElevated,
+  border: `1px solid ${TOKEN.border}`,
   borderRadius: 6,
   padding: "6px 10px",
-  color: "#fff",
+  color: TOKEN.text,
   fontSize: 11.5,
 };
+

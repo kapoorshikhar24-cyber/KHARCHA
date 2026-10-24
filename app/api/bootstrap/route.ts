@@ -8,12 +8,19 @@ export async function GET() {
       select: {
         id: true,
         name: true,
+        displayName: true,
         email: true,
+        phoneNumber: true,
+        country: true,
+        timezone: true,
+        preferredLanguage: true,
         avatar: true,
         createdAt: true,
         pinCode: true,
         biometricCredential: true,
         isEmailVerified: true,
+        isProfileCompleted: true,
+        onboardingState: true,
       },
     });
 
@@ -42,7 +49,7 @@ export async function GET() {
     }
 
     // Fetch active user complete profile
-    const [settings, categories, wallets, budgetGoals, expenses] = await Promise.all([
+    const [settings, categories, wallets, budgetGoals, expenses, integrations] = await Promise.all([
       prisma.userSettings.findUnique({ where: { userId: activeUserId } }),
       prisma.customCategory.findMany({ where: { userId: activeUserId } }),
       prisma.wallet.findMany({ where: { userId: activeUserId } }),
@@ -51,22 +58,59 @@ export async function GET() {
         where: { userId: activeUserId },
         orderBy: { createdAt: "desc" },
       }),
+      prisma.userIntegration.findMany({ where: { userId: activeUserId } }),
     ]);
 
     const activeUser = users.find((u) => u.id === activeUserId);
+
+    // If activeUser has no onboardingState, auto-create as completed
+    let activeOnboarding = activeUser?.onboardingState;
+    if (!activeOnboarding && activeUser) {
+      activeOnboarding = await prisma.onboardingState.create({
+        data: {
+          userId: activeUser.id,
+          status: "completed",
+          currentStep: 6,
+          completedSteps: JSON.stringify(["welcome", "profile", "preferences", "integrations", "review"]),
+          skippedOptionalSteps: "[]",
+          startedAt: activeUser.createdAt,
+          completedAt: new Date(),
+        },
+      });
+    }
+
+    let parsedCompletedSteps: string[] = [];
+    try {
+      parsedCompletedSteps = JSON.parse(activeOnboarding?.completedSteps || "[]");
+    } catch {
+      parsedCompletedSteps = [];
+    }
 
     return NextResponse.json({
       isInitialized: true,
       users: users.map((u) => ({
         id: u.id,
         name: u.name,
+        displayName: u.displayName || u.name,
         email: u.email || undefined,
+        phoneNumber: u.phoneNumber || undefined,
+        country: u.country || "IN",
+        timezone: u.timezone || "Asia/Kolkata",
+        preferredLanguage: u.preferredLanguage || "en",
         avatar: u.avatar || undefined,
         isEmailVerified: u.isEmailVerified,
+        isProfileCompleted: u.isProfileCompleted,
+        onboardingStatus: u.onboardingState?.status || "completed",
+        onboardingStep: u.onboardingState?.currentStep || 6,
         createdAt: u.createdAt.toISOString(),
       })),
       activeUserId,
       activeData: {
+        onboarding: {
+          status: activeOnboarding?.status || "completed",
+          currentStep: activeOnboarding?.currentStep || 6,
+          completedSteps: parsedCompletedSteps,
+        },
         settings: settings
           ? {
               theme: settings.theme,
@@ -79,12 +123,15 @@ export async function GET() {
               offline: settings.offline,
               dailyBudget: settings.dailyBudget,
               monthlyBudget: settings.monthlyBudget,
+              monthlyResetDay: settings.monthlyResetDay || 1,
               layoutMode: settings.layoutMode as any,
               userName: activeUser?.name || "User",
               userEmail: activeUser?.email || "",
               profileImage: activeUser?.avatar || undefined,
               defaultWalletId: settings.defaultWalletId,
               currency: settings.currency as any,
+              notificationPreferences: settings.notificationPreferences,
+              dashboardPreferences: settings.dashboardPreferences,
             }
           : null,
         categories: categories.map((c) => ({
@@ -117,6 +164,12 @@ export async function GET() {
           walletId: e.walletId || undefined,
           isRecurring: e.isRecurring,
           frequency: (e.frequency as any) || undefined,
+        })),
+        integrations: integrations.map((i) => ({
+          type: i.integrationType,
+          status: i.connectionStatus,
+          consent: i.consentStatus,
+          connectedAt: i.connectedAt,
         })),
       },
       storageType: "enterprise_sqlite_prisma",

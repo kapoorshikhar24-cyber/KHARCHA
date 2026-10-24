@@ -213,6 +213,24 @@ class EnterpriseStorageService {
   }
 
   /**
+   * Sync partial user settings to database
+   */
+  async syncSettings(userId: string, partialSettings: Partial<Settings>): Promise<void> {
+    try {
+      await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          settings: partialSettings,
+        }),
+      });
+    } catch (err) {
+      console.error("Enterprise DB syncSettings error:", err);
+    }
+  }
+
+  /**
    * Sync complete user dataset (expenses, settings, categories, wallets, budgetGoals) atomically
    * Debounced by 300ms to coalesce rapid state updates into a single database write.
    */
@@ -353,6 +371,9 @@ class EnterpriseStorageService {
     email: string;
     password: string;
     confirmPassword: string;
+    phoneNumber?: string;
+    countryCode?: string;
+    agreedToTerms?: boolean;
   }): Promise<{ success: boolean; message?: string; user?: any; devVerificationCode?: string; error?: string; details?: string[] }> {
     try {
       const res = await fetch("/api/auth/register", {
@@ -367,6 +388,88 @@ class EnterpriseStorageService {
       return { success: true, message: data.message, user: data.user, devVerificationCode: data.devVerificationCode };
     } catch (err: any) {
       return { success: false, error: err.message || "Network error during registration" };
+    }
+  }
+
+  /**
+   * Get onboarding state for a user
+   */
+  async getOnboardingState(userId: string): Promise<any> {
+    try {
+      const res = await fetch(`/api/onboarding?userId=${encodeURIComponent(userId)}`);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err) {
+      console.error("Enterprise DB getOnboardingState error:", err);
+    }
+    return null;
+  }
+
+  /**
+   * Save incremental onboarding progress
+   */
+  async saveOnboardingStep(payload: {
+    userId: string;
+    step: number;
+    stepKey?: string;
+    isCompleted?: boolean;
+    isSkipped?: boolean;
+    isFinalStep?: boolean;
+    profileData?: any;
+    preferencesData?: any;
+    integrationsData?: any[];
+  }): Promise<{ success: boolean; message?: string; onboarding?: any; error?: string }> {
+    try {
+      const res = await fetch("/api/onboarding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      return data;
+    } catch (err: any) {
+      return { success: false, error: err.message || "Network error saving onboarding" };
+    }
+  }
+
+  /**
+   * Update user profile information
+   */
+  async updateUserProfile(userId: string, profileData: any): Promise<{ success: boolean; user?: any; error?: string }> {
+    try {
+      const res = await fetch(`/api/users/${encodeURIComponent(userId)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(profileData),
+      });
+      const data = await res.json();
+      return data;
+    } catch (err: any) {
+      return { success: false, error: err.message || "Network error updating profile" };
+    }
+  }
+
+  /**
+   * Export all user data as JSON (GDPR / personal backup)
+   */
+  async exportUserData(userId: string): Promise<boolean> {
+    try {
+      const res = await fetch(`/api/users/${encodeURIComponent(userId)}?export=true`);
+      if (!res.ok) throw new Error("Failed to export data");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `kharcha-user-data-${userId}-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      return true;
+    } catch (err) {
+      console.error("Export user data error:", err);
+      return false;
     }
   }
 

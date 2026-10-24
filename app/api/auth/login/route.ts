@@ -33,6 +33,9 @@ export async function POST(req: Request) {
 
     const user = await prisma.user.findFirst({
       where: { email: trimmedEmail },
+      include: {
+        onboardingState: true,
+      },
     });
 
     if (!user || !user.passwordHash || !user.passwordSalt) {
@@ -60,6 +63,29 @@ export async function POST(req: Request) {
       });
     }
 
+    // Existing user auto-migration: if user has no onboardingState, initialize as completed
+    let onboardingState = user.onboardingState;
+    if (!onboardingState) {
+      onboardingState = await prisma.onboardingState.create({
+        data: {
+          userId: user.id,
+          status: "completed",
+          currentStep: 6,
+          completedSteps: JSON.stringify(["welcome", "profile", "preferences", "integrations", "review"]),
+          skippedOptionalSteps: "[]",
+          startedAt: user.createdAt,
+          completedAt: new Date(),
+        },
+      });
+
+      if (!user.isProfileCompleted) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { isProfileCompleted: true },
+        });
+      }
+    }
+
     // Set as active user in AppState
     await prisma.appState.upsert({
       where: { key: "active_user_id" },
@@ -78,7 +104,7 @@ export async function POST(req: Request) {
     });
 
     // Fetch user complete partition data
-    const [settings, categories, wallets, budgetGoals, expenses] = await Promise.all([
+    const [settings, categories, wallets, budgetGoals, expenses, integrations] = await Promise.all([
       prisma.userSettings.findUnique({ where: { userId: user.id } }),
       prisma.customCategory.findMany({ where: { userId: user.id } }),
       prisma.wallet.findMany({ where: { userId: user.id } }),
@@ -87,18 +113,39 @@ export async function POST(req: Request) {
         where: { userId: user.id },
         orderBy: { createdAt: "desc" },
       }),
+      prisma.userIntegration.findMany({ where: { userId: user.id } }),
     ]);
+
+    let parsedCompletedSteps: string[] = [];
+    try {
+      parsedCompletedSteps = JSON.parse(onboardingState.completedSteps || "[]");
+    } catch {
+      parsedCompletedSteps = [];
+    }
 
     return NextResponse.json({
       success: true,
-      message: `Welcome back, ${user.name}!`,
+      message: `Welcome back, ${user.displayName || user.name}!`,
       user: {
         id: user.id,
         name: user.name,
+        displayName: user.displayName || user.name,
         email: user.email,
+        phoneNumber: user.phoneNumber || undefined,
+        country: user.country || "IN",
+        timezone: user.timezone || "Asia/Kolkata",
+        preferredLanguage: user.preferredLanguage || "en",
         avatar: user.avatar || undefined,
         isEmailVerified: user.isEmailVerified,
+        isProfileCompleted: user.isProfileCompleted,
+        onboardingStatus: onboardingState.status,
+        onboardingStep: onboardingState.currentStep,
         createdAt: user.createdAt.toISOString(),
+      },
+      onboarding: {
+        status: onboardingState.status,
+        currentStep: onboardingState.currentStep,
+        completedSteps: parsedCompletedSteps,
       },
       activeData: {
         settings: settings
@@ -113,6 +160,7 @@ export async function POST(req: Request) {
               offline: settings.offline,
               dailyBudget: settings.dailyBudget,
               monthlyBudget: settings.monthlyBudget,
+              monthlyResetDay: settings.monthlyResetDay || 1,
               layoutMode: settings.layoutMode as any,
               userName: user.name,
               userEmail: user.email || "",
@@ -151,6 +199,12 @@ export async function POST(req: Request) {
           walletId: e.walletId || undefined,
           isRecurring: e.isRecurring,
           frequency: (e.frequency as any) || undefined,
+        })),
+        integrations: integrations.map((i) => ({
+          type: i.integrationType,
+          status: i.connectionStatus,
+          consent: i.consentStatus,
+          connectedAt: i.connectedAt,
         })),
       },
     });

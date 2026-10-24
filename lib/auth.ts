@@ -17,6 +17,31 @@ export function isValidEmail(email: string): boolean {
 }
 
 /**
+ * Validates international phone numbers e.g. +91 9876543210 or 9876543210
+ */
+export function isValidPhoneNumber(phone: string): boolean {
+  if (!phone || typeof phone !== "string") return false;
+  const cleaned = phone.replace(/[\s\-().]/g, "");
+  return /^\+?[0-9]{7,15}$/.test(cleaned);
+}
+
+/**
+ * Normalizes phone numbers with country code prefix
+ */
+export function normalizePhoneNumber(phone: string, defaultCountryCode = "+91"): string {
+  if (!phone) return "";
+  let cleaned = phone.trim().replace(/[\s\-().]/g, "");
+  if (!cleaned.startsWith("+")) {
+    if (cleaned.length === 10) {
+      cleaned = `${defaultCountryCode}${cleaned}`;
+    } else {
+      cleaned = `+${cleaned}`;
+    }
+  }
+  return cleaned;
+}
+
+/**
  * Evaluates password strength according to security standards:
  * - Minimum 8 characters
  * - Contains lowercase and uppercase letters

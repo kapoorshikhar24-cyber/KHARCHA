@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { isValidEmail, validatePasswordStrength, hashPassword, generateSixDigitCode, checkRateLimit, getClientIp } from "@/lib/auth";
+import {
+  isValidEmail,
+  validatePasswordStrength,
+  hashPassword,
+  generateSixDigitCode,
+  checkRateLimit,
+  getClientIp,
+  isValidPhoneNumber,
+  normalizePhoneNumber,
+} from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
@@ -14,7 +23,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { name, email, password, confirmPassword } = body;
+    const { name, email, password, confirmPassword, phoneNumber, countryCode = "+91", agreedToTerms } = body;
 
     // 1. Required field validations
     if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -41,7 +50,27 @@ export async function POST(req: Request) {
       );
     }
 
-    // 3. Password match validation
+    // 3. Optional Phone number validation
+    let normalizedPhone: string | null = null;
+    if (phoneNumber && typeof phoneNumber === "string" && phoneNumber.trim().length > 0) {
+      if (!isValidPhoneNumber(phoneNumber.trim())) {
+        return NextResponse.json(
+          { error: "Please enter a valid mobile number with country code." },
+          { status: 400 }
+        );
+      }
+      normalizedPhone = normalizePhoneNumber(phoneNumber.trim(), countryCode || "+91");
+    }
+
+    // 4. Terms of Service & Privacy agreement validation
+    if (!agreedToTerms) {
+      return NextResponse.json(
+        { error: "You must accept the Terms of Service and Privacy Policy to continue." },
+        { status: 400 }
+      );
+    }
+
+    // 5. Password match validation
     if (!password) {
       return NextResponse.json(
         { error: "Password is required." },
@@ -56,7 +85,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 4. Password strength validation
+    // 6. Password strength validation
     const strength = validatePasswordStrength(password);
     if (!strength.isValid) {
       return NextResponse.json(
@@ -68,7 +97,7 @@ export async function POST(req: Request) {
       );
     }
 
-    // 5. Check if email is already registered
+    // 7. Check if email is already registered
     const existingUser = await prisma.user.findFirst({
       where: {
         email: trimmedEmail,
@@ -84,25 +113,43 @@ export async function POST(req: Request) {
       );
     }
 
-    // 6. Secure password hashing
+    // 8. Secure password hashing
     const { salt, hash } = hashPassword(password);
 
-    // 7. Generate 6-digit email verification code with 15-minute expiry
+    // 9. Generate 6-digit email verification code with 15-minute expiry
     const verificationCode = generateSixDigitCode();
     const verificationExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 mins
 
-    // 8. Create user and initial isolated environment in a single ACID transaction
+    // 10. Create user, settings, wallets, and onboarding state in a single ACID transaction
     const newUser = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
           name: name.trim(),
+          displayName: name.trim().split(" ")[0],
           email: trimmedEmail,
+          phoneNumber: normalizedPhone,
+          country: countryCode ? countryCode.replace("+", "") : "IN",
           passwordHash: hash,
           passwordSalt: salt,
           isEmailVerified: false,
+          isProfileCompleted: false,
+          agreedToTerms: true,
+          agreedToTermsAt: new Date(),
           verificationCode,
           verificationExpires,
           pinCode: "1234",
+        },
+      });
+
+      // Initialize Onboarding State at Step 1
+      await tx.onboardingState.create({
+        data: {
+          userId: user.id,
+          status: "in_progress",
+          currentStep: 1,
+          completedSteps: "[]",
+          skippedOptionalSteps: "[]",
+          startedAt: new Date(),
         },
       });
 
@@ -138,9 +185,12 @@ export async function POST(req: Request) {
           offline: true,
           dailyBudget: 2000,
           monthlyBudget: 50000,
+          monthlyResetDay: 1,
           layoutMode: "mobile",
           currency: "₹",
           defaultWalletId: "cash",
+          notificationPreferences: JSON.stringify({ smsAlerts: true, emailReports: false, budgetThresholdAlerts: true }),
+          dashboardPreferences: JSON.stringify({ defaultPeriod: "month", showQuickAdd: true }),
         },
       });
 
@@ -153,6 +203,7 @@ export async function POST(req: Request) {
           details: JSON.stringify({
             name: user.name,
             email: user.email,
+            phoneNumber: user.phoneNumber,
             isEmailVerified: false,
           }),
         },
@@ -167,10 +218,14 @@ export async function POST(req: Request) {
       user: {
         id: newUser.id,
         name: newUser.name,
+        displayName: newUser.displayName,
         email: newUser.email,
+        phoneNumber: newUser.phoneNumber,
         isEmailVerified: false,
+        isProfileCompleted: false,
+        onboardingStatus: "in_progress",
       },
-      // In local/development environment, include verification code for effortless testing
+      // In local/development environment, include verification code for testing convenience
       devVerificationCode: process.env.NODE_ENV !== "production" ? verificationCode : undefined,
     });
   } catch (error: any) {

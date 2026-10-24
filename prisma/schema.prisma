@@ -8,48 +8,91 @@ generator client {
 }
 
 model User {
-  id                  String           @id @default(cuid())
+  id                  String             @id @default(cuid())
   name                String
-  email               String?          @unique
+  displayName         String?
+  email               String?            @unique
+  phoneNumber         String?
+  country             String?            @default("IN")
+  timezone            String?            @default("Asia/Kolkata")
+  preferredLanguage   String?            @default("en")
   passwordHash        String?
   passwordSalt        String?
   avatar              String?
-  pinCode             String?          @default("1234")
+  pinCode             String?            @default("1234")
   biometricCredential String?
-  isEmailVerified     Boolean          @default(false)
+  isEmailVerified     Boolean            @default(false)
+  isProfileCompleted  Boolean            @default(false)
+  agreedToTerms       Boolean            @default(false)
+  agreedToTermsAt     DateTime?
   verificationCode    String?
   verificationExpires DateTime?
   resetCode           String?
   resetExpires        DateTime?
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
 
   settings            UserSettings?
+  onboardingState     OnboardingState?
+  integrations        UserIntegration[]
   expenses            Expense[]
   categories          CustomCategory[]
   wallets             Wallet[]
   budgetGoals         BudgetGoal[]
   auditLogs           AuditLog[]
+  smsDevices          SmsDevicePairing[]
+}
+
+model OnboardingState {
+  id                   String    @id @default(cuid())
+  userId               String    @unique
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status               String    @default("not_started") // "not_started" | "in_progress" | "completed" | "skipped_optional"
+  currentStep          Int       @default(1)
+  completedSteps       String    @default("[]") // JSON string array of step keys e.g. ["welcome", "profile"]
+  skippedOptionalSteps String    @default("[]") // JSON string array of skipped steps e.g. ["integrations"]
+  startedAt            DateTime  @default(now())
+  completedAt          DateTime?
+  updatedAt            DateTime  @updatedAt
+}
+
+model UserIntegration {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  integrationType   String    // "sms_detection" | "bank_statement" | "push_notifications" | "cloud_sync"
+  connectionStatus  String    @default("disconnected") // "connected" | "disconnected" | "pending"
+  consentStatus     String    @default("pending")      // "granted" | "denied" | "skipped"
+  connectedAt       DateTime?
+  lastSyncAt        DateTime?
+  metadata          String?   // JSON configuration
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@unique([userId, integrationType])
 }
 
 model UserSettings {
-  id              String   @id @default(cuid())
-  userId          String   @unique
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  theme           String   @default("dark")
-  accentColor     String?
-  biometric       Boolean  @default(true)
-  pin             Boolean  @default(true)
-  voice           Boolean  @default(true)
-  haptic          Boolean  @default(true)
-  offline         Boolean  @default(true)
-  dailyBudget     Float    @default(2000)
-  monthlyBudget   Float    @default(50000)
-  layoutMode      String   @default("mobile")
-  currency        String   @default("₹")
-  defaultWalletId String   @default("cash")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                      String   @id @default(cuid())
+  userId                  String   @unique
+  user                    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  theme                   String   @default("dark")
+  accentColor             String?
+  biometric               Boolean  @default(true)
+  pin                     Boolean  @default(true)
+  voice                   Boolean  @default(true)
+  haptic                  Boolean  @default(true)
+  offline                 Boolean  @default(true)
+  dailyBudget             Float    @default(2000)
+  monthlyBudget           Float    @default(50000)
+  monthlyResetDay         Int      @default(1)
+  layoutMode              String   @default("mobile")
+  currency                String   @default("₹")
+  defaultWalletId         String   @default("cash")
+  notificationPreferences String?  @default("{\"smsAlerts\":true,\"emailReports\":false,\"budgetThresholdAlerts\":true}")
+  dashboardPreferences    String?  @default("{\"defaultPeriod\":\"month\",\"showQuickAdd\":true}")
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
 }
 
 model Wallet {
@@ -97,21 +140,47 @@ model BudgetGoal {
 }
 
 model Expense {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  category    String
-  amount      Float
-  note        String   @default("")
-  createdAt   String
-  type        String   @default("expense")
-  walletId    String?
-  isRecurring Boolean  @default(false)
-  frequency   String?
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category       String
+  amount         Float
+  note           String   @default("")
+  createdAt      String
+  type           String   @default("expense")
+  walletId       String?
+  isRecurring    Boolean  @default(false)
+  frequency      String?
+  bankName       String?
+  paymentMethod  String?
+  refNumber      String?
+  accountLast4   String?
+  merchant       String?
+  syncSource     String   @default("manual") // manual, bank_sms, csv, voice
+  verifiedStatus String   @default("auto_detected") // auto_detected, verified, disputed
+  rawSmsHash     String?
+  updatedAt      DateTime @updatedAt
 
   @@index([userId, createdAt])
   @@index([userId, category])
+  @@index([userId, refNumber])
+  @@index([userId, rawSmsHash])
+}
+
+model SmsDevicePairing {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceName  String   @default("Android Phone")
+  deviceToken String   @unique
+  pairingCode String?
+  isActive    Boolean  @default(true)
+  lastSyncAt  DateTime?
+  syncCount   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, isActive])
 }
 
 model AuditLog {
