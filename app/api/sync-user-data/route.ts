@@ -97,24 +97,44 @@ export async function POST(req: Request) {
         }
       }
 
-      // 5. Sync Expenses if provided
+      // 5. Reconcile Expenses (Incremental Upsert to prevent wiping bank SMS or concurrent data)
       if (Array.isArray(expenses)) {
-        await tx.expense.deleteMany({ where: { userId } });
         for (const exp of expenses) {
-          await tx.expense.create({
-            data: {
-              id: exp.id || undefined,
-              userId,
-              category: exp.category,
-              amount: Number(exp.amount),
-              note: exp.note || "",
-              createdAt: exp.createdAt || new Date().toISOString(),
-              type: exp.type || "expense",
-              walletId: exp.walletId || null,
-              isRecurring: exp.isRecurring ?? false,
-              frequency: exp.frequency || null,
-            },
-          });
+          if (!exp) continue;
+          const expData = {
+            userId,
+            category: exp.category || "other",
+            amount: Number(exp.amount) || 0,
+            note: exp.note || "",
+            createdAt: exp.createdAt || new Date().toISOString(),
+            type: exp.type || "expense",
+            walletId: exp.walletId || null,
+            isRecurring: exp.isRecurring ?? false,
+            frequency: exp.frequency || null,
+            bankName: exp.bankName || null,
+            paymentMethod: exp.paymentMethod || null,
+            refNumber: exp.refNumber || null,
+            accountLast4: exp.accountLast4 || null,
+            merchant: exp.merchant || null,
+            syncSource: exp.syncSource || "manual",
+            verifiedStatus: exp.verifiedStatus || "verified",
+            rawSmsHash: exp.rawSmsHash || null,
+          };
+
+          if (exp.id) {
+            await tx.expense.upsert({
+              where: { id: exp.id },
+              update: expData,
+              create: {
+                id: exp.id,
+                ...expData,
+              },
+            });
+          } else {
+            await tx.expense.create({
+              data: expData,
+            });
+          }
         }
       }
     });

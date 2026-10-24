@@ -71,29 +71,34 @@ export default function OnboardingFlow({
   const [enableSms, setEnableSms] = useState(true);
   const [enablePush, setEnablePush] = useState(true);
   const [enableSync, setEnableSync] = useState(true);
+  const [isLoadingProgress, setIsLoadingProgress] = useState(true);
 
   // Load persistent onboarding state on mount
   useEffect(() => {
     let cancelled = false;
     async function loadProgress() {
-      const res = await enterpriseStorage.getOnboardingState(user.id);
-      if (!cancelled && res && res.onboarding) {
-        if (res.onboarding.currentStep && res.onboarding.currentStep >= 1 && res.onboarding.currentStep <= 6) {
-          setCurrentStep(res.onboarding.currentStep);
-        }
-        if (res.user) {
-          if (res.user.displayName) setDisplayName(res.user.displayName);
-          if (res.user.phoneNumber) setPhoneNumber(res.user.phoneNumber);
-          if (res.user.timezone) setTimezone(res.user.timezone);
-          if (res.user.avatar) setSelectedAvatar(res.user.avatar);
-        }
-        if (res.settings) {
-          if (res.settings.currency === "₹" || res.settings.currency === "$" || res.settings.currency === "€" || res.settings.currency === "£") {
-            setCurrency(res.settings.currency);
+      try {
+        const res = await enterpriseStorage.getOnboardingState(user.id);
+        if (!cancelled && res && res.onboarding) {
+          if (res.onboarding.currentStep && res.onboarding.currentStep >= 1 && res.onboarding.currentStep <= 6) {
+            setCurrentStep(res.onboarding.currentStep);
           }
-          if (res.settings.monthlyBudget) setMonthlyBudget(res.settings.monthlyBudget.toString());
-          if (res.settings.dailyBudget) setDailyBudget(res.settings.dailyBudget.toString());
+          if (res.user) {
+            if (res.user.displayName) setDisplayName(res.user.displayName);
+            if (res.user.phoneNumber) setPhoneNumber(res.user.phoneNumber);
+            if (res.user.timezone) setTimezone(res.user.timezone);
+            if (res.user.avatar) setSelectedAvatar(res.user.avatar);
+          }
+          if (res.settings) {
+            if (res.settings.currency === "₹" || res.settings.currency === "$" || res.settings.currency === "€" || res.settings.currency === "£") {
+              setCurrency(res.settings.currency);
+            }
+            if (res.settings.monthlyBudget) setMonthlyBudget(res.settings.monthlyBudget.toString());
+            if (res.settings.dailyBudget) setDailyBudget(res.settings.dailyBudget.toString());
+          }
         }
+      } finally {
+        if (!cancelled) setIsLoadingProgress(false);
       }
     }
     loadProgress();
@@ -249,12 +254,14 @@ export default function OnboardingFlow({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
+        justifyContent: "flex-start",
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
         background: isLight
           ? "linear-gradient(135deg, #F8FAFC 0%, #EFF6FF 100%)"
           : "radial-gradient(ellipse at 50% 20%, #1A1A24 0%, #09090B 100%)",
         color: isLight ? "#0F172A" : "#F8FAFC",
-        padding: "32px 16px",
+        padding: "40px 16px",
         boxSizing: "border-box",
       }}
     >
@@ -271,11 +278,18 @@ export default function OnboardingFlow({
           padding: "32px 28px",
           boxSizing: "border-box",
           position: "relative",
-          overflow: "hidden",
+          margin: "auto 0",
         }}
       >
-        {/* Top Progress Indicator */}
-        <div style={{ marginBottom: 24 }}>
+        {isLoadingProgress ? (
+          <div style={{ padding: "80px 0", textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+            <div style={{ width: 36, height: 36, border: `3px solid ${TOKEN.amber}33`, borderTopColor: TOKEN.amber, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+            <div style={{ fontSize: 13, color: isLight ? "#64748B" : "#94A3B8" }}>Loading your onboarding profile...</div>
+          </div>
+        ) : (
+          <>
+            {/* Top Progress Indicator */}
+            <div style={{ marginBottom: 24 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: TOKEN.amber }}>
               Step {currentStep} of 6 • {stepsInfo[currentStep - 1]?.title}
@@ -664,7 +678,10 @@ export default function OnboardingFlow({
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 13.5 }}>Android Bank SMS Tracking</div>
                     <div style={{ fontSize: 11.5, color: isLight ? "#64748B" : "#94A3B8" }}>
-                      Local on-device parser detects transactional debits. No credentials needed.
+                      Local on-device parser detects transactional debits. No banking credentials needed.
+                    </div>
+                    <div style={{ fontSize: 11, color: isLight ? "#B45309" : TOKEN.amber, marginTop: 4, display: "flex", alignItems: "center", gap: 4 }}>
+                      <span>ℹ️</span> Requires KHARCHA Android companion app or paired mobile device. Web browsers cannot read SMS directly.
                     </div>
                   </div>
                 </div>
@@ -902,6 +919,8 @@ export default function OnboardingFlow({
               </button>
             </div>
           </div>
+        )}
+          </>
         )}
       </div>
     </div>

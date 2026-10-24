@@ -92,8 +92,6 @@ export async function GET(
         country: user.country || "IN",
         timezone: user.timezone || "Asia/Kolkata",
         preferredLanguage: user.preferredLanguage || "en",
-        avatar: user.avatar || undefined,
-        pinCode: user.pinCode || "1234",
         isEmailVerified: user.isEmailVerified,
         isProfileCompleted: user.isProfileCompleted,
         onboardingStatus: user.onboardingState?.status || "completed",
@@ -105,7 +103,7 @@ export async function GET(
             accentColor: settings.accentColor || undefined,
             biometric: settings.biometric,
             pin: settings.pin,
-            pinCode: user.pinCode || "1234",
+            pinCode: settings.pin ? "••••" : "",
             voice: settings.voice,
             haptic: settings.haptic,
             offline: settings.offline,
@@ -244,6 +242,24 @@ export async function DELETE(
 ) {
   try {
     const { userId } = await params;
+
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!existingUser) {
+      return NextResponse.json({ error: "User account not found." }, { status: 404 });
+    }
+
+    try {
+      const body = await req.json();
+      if (body?.confirmEmail) {
+        if (!existingUser.email || body.confirmEmail.toLowerCase().trim() !== existingUser.email.toLowerCase().trim()) {
+          return NextResponse.json({ error: "Confirmation email does not match user account." }, { status: 400 });
+        }
+      }
+    } catch {
+      // Body empty or non-JSON
+    }
 
     await prisma.$transaction(async (tx) => {
       await tx.auditLog.create({

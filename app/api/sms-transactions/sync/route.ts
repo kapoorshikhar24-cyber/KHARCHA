@@ -33,143 +33,137 @@ export async function POST(request: Request) {
       }
     }
 
-    // Fallback: If no device token and only 1 user exists in local DB
-    if (!resolvedUserId) {
-      const defaultUser = await prisma.user.findFirst();
-      if (defaultUser) {
-        resolvedUserId = defaultUser.id;
-      }
-    }
-
+    // Require explicit authorization: must have valid paired deviceToken or valid requestedUserId
     if (!resolvedUserId) {
       return NextResponse.json(
-        { success: false, error: "Unauthorized: Invalid device token or user identity" },
+        { success: false, error: "Unauthorized: Invalid or missing device pairing token" },
         { status: 401 }
       );
     }
 
-    let addedCount = 0;
-    let duplicateCount = 0;
-    const addedTransactions = [];
+    const syncResult = await prisma.$transaction(async (txPrisma) => {
+      let addedCount = 0;
+      let duplicateCount = 0;
+      const addedTransactions = [];
 
-    for (const tx of transactions) {
-      const amount = parseFloat(tx.amount);
-      if (isNaN(amount) || amount <= 0) continue;
+      for (const tx of transactions) {
+        const amount = parseFloat(tx.amount);
+        if (isNaN(amount) || amount <= 0) continue;
 
-      const refNumber = tx.refNumber ? String(tx.refNumber).trim() : null;
-      const rawSmsHash = tx.fingerprint || null;
+        const refNumber = tx.refNumber ? String(tx.refNumber).trim() : null;
+        const rawSmsHash = tx.fingerprint || null;
 
-      // 2. Duplicate Detection
-      // Check by refNumber (UTR / UPI Ref) if available
-      if (refNumber) {
-        const existingByRef = await prisma.expense.findFirst({
+        // 2. Duplicate Detection
+        if (refNumber) {
+          const existingByRef = await txPrisma.expense.findFirst({
+            where: {
+              userId: resolvedUserId,
+              refNumber: refNumber,
+            },
+          });
+          if (existingByRef) {
+            duplicateCount++;
+            continue;
+          }
+        }
+
+        if (rawSmsHash) {
+          const existingByHash = await txPrisma.expense.findFirst({
+            where: {
+              userId: resolvedUserId,
+              rawSmsHash: rawSmsHash,
+            },
+          });
+          if (existingByHash) {
+            duplicateCount++;
+            continue;
+          }
+        }
+
+        const txDate = tx.date ? new Date(tx.date) : new Date();
+        const fifteenMinBefore = new Date(txDate.getTime() - 15 * 60 * 1000).toISOString();
+        const fifteenMinAfter = new Date(txDate.getTime() + 15 * 60 * 1000).toISOString();
+
+        const fuzzyDuplicate = await txPrisma.expense.findFirst({
           where: {
             userId: resolvedUserId,
-            refNumber: refNumber,
+            amount: amount,
+            type: tx.type || "expense",
+            createdAt: {
+              gte: fifteenMinBefore,
+              lte: fifteenMinAfter,
+            },
           },
         });
-        if (existingByRef) {
+
+        if (fuzzyDuplicate) {
           duplicateCount++;
           continue;
         }
-      }
 
-      // Check by rawSmsHash / fingerprint if available
-      if (rawSmsHash) {
-        const existingByHash = await prisma.expense.findFirst({
-          where: {
+        // 3. Create Validated Expense Record
+        const noteParts = [];
+        if (tx.merchantOrSender) noteParts.push(tx.merchantOrSender);
+        if (tx.bank) noteParts.push(`(${tx.bank})`);
+        if (refNumber) noteParts.push(`Ref: ${refNumber}`);
+
+        const note = noteParts.join(" ") || "Auto-detected Bank Transaction";
+
+        const created = await txPrisma.expense.create({
+          data: {
             userId: resolvedUserId,
+            amount: amount,
+            category: tx.category || "food",
+            note: note,
+            createdAt: tx.date || new Date().toISOString(),
+            type: tx.type || "expense",
+            walletId: tx.walletId || (tx.paymentMethod === "UPI" ? "upi" : "bank"),
+            bankName: tx.bank || null,
+            paymentMethod: tx.paymentMethod || null,
+            refNumber: refNumber,
+            accountLast4: tx.accountLast4 ? String(tx.accountLast4) : null,
+            merchant: tx.merchantOrSender || null,
+            syncSource: "bank_sms",
+            verifiedStatus: "auto_detected",
             rawSmsHash: rawSmsHash,
           },
         });
-        if (existingByHash) {
-          duplicateCount++;
-          continue;
-        }
+
+        addedCount++;
+        addedTransactions.push(created);
       }
 
-      // Check fuzzy match within 15-minute window for same amount & bank
-      const txDate = tx.date ? new Date(tx.date) : new Date();
-      const fifteenMinBefore = new Date(txDate.getTime() - 15 * 60 * 1000).toISOString();
-      const fifteenMinAfter = new Date(txDate.getTime() + 15 * 60 * 1000).toISOString();
-
-      const fuzzyDuplicate = await prisma.expense.findFirst({
-        where: {
-          userId: resolvedUserId,
-          amount: amount,
-          type: tx.type || "expense",
-          createdAt: {
-            gte: fifteenMinBefore,
-            lte: fifteenMinAfter,
+      // 4. Update Device Sync Telemetry
+      if (deviceRecordId) {
+        await txPrisma.smsDevicePairing.update({
+          where: { id: deviceRecordId },
+          data: {
+            lastSyncAt: new Date(),
+            syncCount: { increment: addedCount },
           },
-        },
-      });
-
-      if (fuzzyDuplicate) {
-        duplicateCount++;
-        continue;
+        });
       }
 
-      // 3. Create Validated Expense Record
-      const noteParts = [];
-      if (tx.merchantOrSender) noteParts.push(tx.merchantOrSender);
-      if (tx.bank) noteParts.push(`(${tx.bank})`);
-      if (refNumber) noteParts.push(`Ref: ${refNumber}`);
+      // 5. Audit Log
+      if (addedCount > 0) {
+        await txPrisma.auditLog.create({
+          data: {
+            userId: resolvedUserId,
+            action: "SMS_TRANSACTION_SYNC",
+            entity: "Expense",
+            details: `Synchronized ${addedCount} transaction(s) from Bank SMS. Skipped ${duplicateCount} duplicate(s).`,
+          },
+        });
+      }
 
-      const note = noteParts.join(" ") || "Auto-detected Bank Transaction";
-
-      const created = await prisma.expense.create({
-        data: {
-          userId: resolvedUserId,
-          amount: amount,
-          category: tx.category || "food",
-          note: note,
-          createdAt: tx.date || new Date().toISOString(),
-          type: tx.type || "expense",
-          walletId: tx.walletId || (tx.paymentMethod === "UPI" ? "upi" : "bank"),
-          bankName: tx.bank || null,
-          paymentMethod: tx.paymentMethod || null,
-          refNumber: refNumber,
-          accountLast4: tx.accountLast4 ? String(tx.accountLast4) : null,
-          merchant: tx.merchantOrSender || null,
-          syncSource: "bank_sms",
-          verifiedStatus: "auto_detected",
-          rawSmsHash: rawSmsHash,
-        },
-      });
-
-      addedCount++;
-      addedTransactions.push(created);
-    }
-
-    // 4. Update Device Sync Telemetry
-    if (deviceRecordId) {
-      await prisma.smsDevicePairing.update({
-        where: { id: deviceRecordId },
-        data: {
-          lastSyncAt: new Date(),
-          syncCount: { increment: addedCount },
-        },
-      });
-    }
-
-    // 5. Audit Log
-    if (addedCount > 0) {
-      await prisma.auditLog.create({
-        data: {
-          userId: resolvedUserId,
-          action: "SMS_TRANSACTION_SYNC",
-          entity: "Expense",
-          details: `Synchronized ${addedCount} transaction(s) from Bank SMS. Skipped ${duplicateCount} duplicate(s).`,
-        },
-      });
-    }
+      return { addedCount, duplicateCount, addedTransactions };
+    });
 
     return NextResponse.json({
       success: true,
-      added: addedCount,
-      duplicatesSkipped: duplicateCount,
-      transactions: addedTransactions,
+      added: syncResult.addedCount,
+      duplicatesSkipped: syncResult.duplicateCount,
+      transactions: syncResult.addedTransactions,
       syncedAt: new Date().toISOString(),
     });
   } catch (error: any) {

@@ -410,6 +410,8 @@ export default function WebShell({
             flexDirection: "column",
             transition: "width 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
             zIndex: 30,
+            overflowY: "auto",
+            WebkitOverflowScrolling: "touch",
           }}
         >
           {/* Logo & Brand */}
@@ -2733,20 +2735,25 @@ const modalBackdropStyle: React.CSSProperties = {
   background: "rgba(0,0,0,0.65)",
   backdropFilter: "blur(8px)",
   display: "flex",
-  alignItems: "center",
+  alignItems: "flex-start",
   justifyContent: "center",
   zIndex: 1000,
-  padding: 16,
+  padding: "24px 16px",
+  overflowY: "auto",
+  WebkitOverflowScrolling: "touch",
 };
 
 const modalContentStyle: React.CSSProperties = {
   width: "100%",
   maxWidth: 420,
+  maxHeight: "90vh",
+  overflowY: "auto",
   background: TOKEN.surface,
   border: `1px solid ${TOKEN.border}`,
   borderRadius: 24,
   padding: "24px 22px",
   boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
   color: TOKEN.text,
+  margin: "auto 0",
 };
 

@@ -354,7 +354,9 @@ export default function AuthScreen({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "center",
+        justifyContent: "flex-start",
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
         padding: isDesktop ? "48px 32px" : "32px 18px",
         boxSizing: "border-box",
       }}
@@ -375,7 +377,7 @@ export default function AuthScreen({
           padding: isDesktop ? "36px 32px" : "28px 22px",
           boxSizing: "border-box",
           position: "relative",
-          overflow: "hidden",
+          margin: "auto 0",
         }}
       >
         {/* Subtle Decorative Ambient Glow */}

@@ -69,7 +69,7 @@ export function filterByPeriod(expenses: Expense[], period: PeriodName) {
 }
 
 export function sumExpenses(expenses: Expense[]) {
-  return expenses.reduce((s, e) => s + (e.type === "income" ? 0 : e.amount), 0);
+  return expenses.reduce((s, e) => s + (e.type === "income" || e.type === "transfer" ? 0 : e.amount), 0);
 }
 
 export function sumIncome(expenses: Expense[]) {
@@ -78,9 +78,33 @@ export function sumIncome(expenses: Expense[]) {
 
 export function sumWalletBalance(expenses: Expense[], walletId: string, initialBalance: number = 0) {
   return expenses.reduce((s, e) => {
+    if (e.type === "transfer") {
+      if (e.destinationWalletId === walletId) return s + e.amount;
+      if (e.sourceWalletId === walletId || e.walletId === walletId) return s - e.amount;
+      return s;
+    }
     if (e.walletId !== walletId) return s;
     return e.type === "income" ? s + e.amount : s - e.amount;
   }, initialBalance);
+}
+
+export function getBillingCycleRange(resetDay: number = 1, refDate: Date = new Date()): { start: Date; end: Date } {
+  const day = Math.min(Math.max(resetDay, 1), 28);
+  const currentYear = refDate.getFullYear();
+  const currentMonth = refDate.getMonth();
+  const currentDate = refDate.getDate();
+
+  let start: Date;
+  let end: Date;
+
+  if (currentDate >= day) {
+    start = new Date(currentYear, currentMonth, day, 0, 0, 0, 0);
+    end = new Date(currentYear, currentMonth + 1, day, 0, 0, 0, 0);
+  } else {
+    start = new Date(currentYear, currentMonth - 1, day, 0, 0, 0, 0);
+    end = new Date(currentYear, currentMonth, day, 0, 0, 0, 0);
+  }
+  return { start, end };
 }
 
 export function smartMatchCategory(text: string, keywords: Record<string, string[]>): string | null {
@@ -93,12 +117,13 @@ export function smartMatchCategory(text: string, keywords: Record<string, string
   return null;
 }
 
-export function categoryTotal(expenses: Expense[], catId: string) {
-  const now = new Date();
+export function categoryTotal(expenses: Expense[], catId: string, resetDay: number = 1) {
+  const { start, end } = getBillingCycleRange(resetDay);
   return expenses
     .filter((e) => {
+      if (e.category !== catId || e.type === "income" || e.type === "transfer") return false;
       const d = new Date(e.createdAt);
-      return e.category === catId && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && e.type !== "income";
+      return d >= start && d < end;
     })
     .reduce((s, e) => s + e.amount, 0);
 }
@@ -106,11 +131,13 @@ export function categoryTotal(expenses: Expense[], catId: string) {
 export function weeklyTotals(expenses: Expense[]) {
   const now = new Date();
   const dow = (now.getDay() + 6) % 7; // Monday = 0
+  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const totals = Array(7).fill(0);
   expenses.forEach((e) => {
-    if (e.type === "income") return;
+    if (e.type === "income" || e.type === "transfer") return;
     const d = new Date(e.createdAt);
-    const diff = Math.floor((now.getTime() - d.getTime()) / 86400000);
+    const txMidnight = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const diff = Math.round((todayMidnight - txMidnight) / 86400000);
     const idx = dow - diff;
     if (idx >= 0 && idx < 7) totals[idx] += e.amount;
   });

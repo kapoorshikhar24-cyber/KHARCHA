@@ -160,10 +160,12 @@ export default function UserManagementModal({
         background: "rgba(0, 0, 0, 0.75)",
         backdropFilter: "blur(8px)",
         display: "flex",
-        alignItems: "center",
+        alignItems: "flex-start",
         justifyContent: "center",
         zIndex: 9999,
-        padding: 16,
+        padding: "24px 16px",
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
       }}
       onClick={onClose}
     >
@@ -180,6 +182,7 @@ export default function UserManagementModal({
           boxShadow: "0 25px 60px rgba(0, 0, 0, 0.5)",
           border: `1px solid ${isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.08)"}`,
           overflow: "hidden",
+          margin: "auto 0",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -221,6 +224,9 @@ export default function UserManagementModal({
         <div
           style={{
             display: "flex",
+            overflowX: "auto",
+            WebkitOverflowScrolling: "touch",
+            flexShrink: 0,
             borderBottom: `1px solid ${isLight ? "#E2E8F0" : "rgba(255,255,255,0.08)"}`,
             background: isLight ? "#F8FAFC" : "rgba(255,255,255,0.02)",
             padding: "0 16px",

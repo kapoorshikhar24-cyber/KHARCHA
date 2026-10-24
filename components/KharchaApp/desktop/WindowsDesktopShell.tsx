@@ -566,6 +566,8 @@ export default function WindowsDesktopShell({
             flexDirection: "column",
             padding: "12px 8px",
             gap: 4,
+            overflowY: "auto",
+            WebkitOverflowScrolling: "touch",
           }}
         >
           {/* Section Links */}
@@ -669,7 +671,7 @@ export default function WindowsDesktopShell({
         </aside>
 
         {/* ─── 3. WIDESCREEN WORKSPACE CONTENT ───────────────────────────── */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflow: "hidden" }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, overflowY: "auto", overflowX: "hidden" }}>
           {/* Top KPI Metric Ribbon */}
           <div
             style={{
@@ -1232,7 +1234,7 @@ export default function WindowsDesktopShell({
 
             {/* ── TAB: WALLETS & ACCOUNTS ──────────────────────────────── */}
             {activeSection === "wallets" && (
-              <div style={{ flex: 1, display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14 }}>
+              <div style={{ flex: 1, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 14, overflowY: "auto" }}>
                 {wallets.map((w) => {
                   const bal = expenses
                     .filter((e) => e.walletId === w.id)
@@ -1302,7 +1304,7 @@ export default function WindowsDesktopShell({
 
             {/* ── TAB: SETTINGS ────────────────────────────────────────── */}
             {activeSection === "settings" && (
-              <div style={{ ...desktopCard, flex: 1, maxWidth: 540 }}>
+              <div style={{ ...desktopCard, flex: 1, maxWidth: 540, overflowY: "auto" }}>
                 <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 700, color: TOKEN.text }}>Windows Application Preferences</h3>
                 <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -1448,12 +1450,15 @@ export default function WindowsDesktopShell({
             bottom: 0,
             background: isLight ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0.7)",
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             justifyContent: "center",
             zIndex: 1000,
+            padding: "24px 16px",
+            overflowY: "auto",
+            WebkitOverflowScrolling: "touch",
           }}
         >
-          <div style={{ ...desktopCard, width: 380, padding: 20 }}>
+          <div style={{ ...desktopCard, width: 380, maxHeight: "90vh", overflowY: "auto", margin: "auto 0", padding: 20 }}>
             <h4 style={{ margin: "0 0 8px", fontSize: 14, fontWeight: 700, color: TOKEN.text }}>Voice AI Processing</h4>
             <p style={{ fontSize: 12, color: TOKEN.muted }}>{voiceTranscript}</p>
             {voiceParsed && (

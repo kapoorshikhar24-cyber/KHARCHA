@@ -377,13 +377,44 @@ input {
 .theme-light input::placeholder {
   color: #8E8E9E !important;
 }
-.theme-light select,
-.theme-light textarea {
-  color: #181824 !important;
-}
 .theme-light select option {
   background: #FFFFFF !important;
   color: #181824 !important;
+}
+
+/* ─── Premium Custom Scrollbars ─────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 9999px;
+  transition: background 0.2s ease;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
+}
+.theme-light ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+}
+.theme-light ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.scrollable-y {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scrollable-x {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  -webkit-overflow-scrolling: touch;
 }
 
 

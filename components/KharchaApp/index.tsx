@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import type { ScreenName, PeriodName, Category, Expense, Settings, Wallet, UserProfile, BudgetGoal } from "./Types";
+import type { ScreenName, PeriodName, Category, Expense, Settings, Wallet, UserProfile, BudgetGoal, TransactionType } from "./Types";
 import { CATEGORIES, INCOME_CATEGORIES, AMOUNT_PRESETS, DEFAULT_SETTINGS, STORAGE_KEYS, WALLETS, CATEGORY_KEYWORDS, INCOME_KEYWORDS, getUserStorageKeys } from "./Constants";
 import {
   fmt, todayKey, greeting, dateLabel,
@@ -102,11 +102,11 @@ export default function KharchaApp() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const updatePlatform = () => {
-      if ((window as any).electronAPI) {
-        setPlatformMode("desktop");
-      } else if (window.innerWidth < 768) {
-        setPlatformMode("web");
-      } else if (settings.layoutMode === "desktop" || settings.layoutMode === "windows") {
+      const isElectron = Boolean((window as any).electronAPI);
+      const isWindowsOS = typeof navigator !== "undefined" && /Win/i.test(navigator.userAgent || navigator.platform || "");
+      const isWideScreen = window.innerWidth >= 1024;
+
+      if (isElectron || (isWindowsOS && isWideScreen) || settings.layoutMode === "desktop" || settings.layoutMode === "windows") {
         setPlatformMode("desktop");
       } else {
         setPlatformMode("web");
@@ -130,7 +130,7 @@ export default function KharchaApp() {
   const [showKeypad, setShowKeypad] = useState<boolean>(false);
   const [note, setNote] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
-  const [txType, setTxType] = useState<"expense" | "income">("expense");
+  const [txType, setTxType] = useState<TransactionType>("expense");
   const [selWalletId, setSelWalletId] = useState<string>("cash");
   const [isRecurring, setIsRecurring] = useState<boolean>(false);
   const [txDate, setTxDate] = useState<string>(new Date().toISOString().slice(0, 10));
@@ -221,7 +221,8 @@ export default function KharchaApp() {
       } else if (settings.layoutMode === "mobile" || settings.layoutMode === "phone") {
         setIsDesktop(false);
       } else {
-        setIsDesktop(window.innerWidth > 768);
+        const isWindows = typeof navigator !== "undefined" && /Win/i.test(navigator.userAgent || navigator.platform || "");
+        setIsDesktop(isWindows || window.innerWidth >= 1024);
       }
     };
     updateLayout();
@@ -364,13 +365,34 @@ export default function KharchaApp() {
     };
   }, []);
 
-  // ── Navigation ───────────────────────────────────────────────────────────────
+  // ── Navigation with Browser History ──────────────────────────────────────────
   const go = useCallback((s: ScreenName) => {
     if (settings.haptic) triggerHaptic("light");
     setScreen(s);
     setVoiceOpen(false);
     setPinInput("");
+    if (typeof window !== "undefined") {
+      try {
+        window.history.pushState({ screen: s }, "", `#${s}`);
+      } catch {
+        // Safe fallback in sandboxed frames
+      }
+    }
   }, [settings.haptic]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handlePopState = (e: PopStateEvent) => {
+      if (e.state && e.state.screen) {
+        setScreen(e.state.screen);
+      } else if (window.location.hash) {
+        const hashScreen = window.location.hash.replace("#", "") as ScreenName;
+        if (hashScreen) setScreen(hashScreen);
+      }
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   const handleProfileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -432,10 +454,12 @@ export default function KharchaApp() {
       <div style={{
         position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
         background: "rgba(0,0,0,0.85)", display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20
+        alignItems: "center", justifyContent: "flex-start", zIndex: 1000, padding: "24px 16px",
+        overflowY: "auto", WebkitOverflowScrolling: "touch"
       }}>
         <div style={{
           background: TOKEN.surface, borderRadius: 24, padding: 24, width: "100%", maxWidth: 340,
+          maxHeight: "92vh", overflowY: "auto", margin: "auto 0",
           display: "flex", flexDirection: "column", gap: 20, border: `1px solid ${TOKEN.border}`
         }}>
           <div style={{ fontSize: 16, fontWeight: 700, color: TOKEN.text, textAlign: "center" }}>Adjust Profile Picture</div>
@@ -516,8 +540,9 @@ export default function KharchaApp() {
           background: "rgba(0,0,0,0.85)",
           backdropFilter: "blur(16px)",
           display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "center",
-          zIndex: 1100, padding: 20,
+          alignItems: "center", justifyContent: "flex-start",
+          zIndex: 1100, padding: "24px 16px",
+          overflowY: "auto", WebkitOverflowScrolling: "touch",
         }}
         onClick={(e) => {
           if (e.target === e.currentTarget) {
@@ -531,6 +556,9 @@ export default function KharchaApp() {
           borderRadius: 28,
           padding: "32px 24px 28px",
           width: "100%", maxWidth: 340,
+          maxHeight: "92vh",
+          overflowY: "auto",
+          margin: "auto 0",
           display: "flex", flexDirection: "column", alignItems: "center",
           border: `1px solid ${TOKEN.border}`,
           boxShadow: `0 20px 60px rgba(0,0,0,0.6), 0 0 40px ${accentColor}18`,
@@ -1493,12 +1521,17 @@ export default function KharchaApp() {
         background: "rgba(0, 0, 0, 0.78)",
         backdropFilter: "blur(10px)",
         WebkitBackdropFilter: "blur(10px)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        padding: 20,
+        display: "flex", alignItems: "flex-start", justifyContent: "center",
+        padding: "24px 16px",
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
       }}>
         <div style={{
           ...S.voiceBox,
           maxWidth: 380,
+          maxHeight: "90vh",
+          overflowY: "auto",
+          margin: "auto 0",
           background: TOKEN.surface,
           boxShadow: "0 24px 48px rgba(0,0,0,0.6)",
           border: `1px solid ${isListening ? TOKEN.amber : TOKEN.border}`,
@@ -1669,8 +1702,12 @@ export default function KharchaApp() {
           : TOKEN.bg,
         color: isLight ? "#111827" : TOKEN.text,
         display: "flex", flexDirection: "column", alignItems: "center",
-        justifyContent: "center", padding: "40px 24px", boxSizing: "border-box", gap: 0
+        justifyContent: "flex-start",
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
+        padding: "40px 24px", boxSizing: "border-box", gap: 0
       }} className="screen-enter form-screen">
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: "100%", margin: "auto 0" }}>
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div style={{
@@ -1884,6 +1921,7 @@ export default function KharchaApp() {
         {/* Footer info */}
         <div style={{ marginTop: 26, fontSize: 11.5, color: isLight ? "#6B7280" : "rgba(255,255,255,0.25)", textAlign: "center" }}>
           New users can register independently • Existing users can unlock via PIN or credentials
+        </div>
         </div>
       </div>
     );
@@ -5800,10 +5838,12 @@ export default function KharchaApp() {
           <div style={{
             position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
             background: "rgba(0,0,0,0.85)", display: "flex", flexDirection: "column",
-            alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20
+            alignItems: "center", justifyContent: "flex-start", zIndex: 1000, padding: "24px 16px",
+            overflowY: "auto", WebkitOverflowScrolling: "touch"
           }}>
             <div style={{
               background: TOKEN.surface, borderRadius: 24, padding: 24, width: "100%", maxWidth: 340,
+              maxHeight: "90vh", overflowY: "auto", margin: "auto 0",
               display: "flex", flexDirection: "column", gap: 16, border: `1px solid ${TOKEN.border}`
             }}>
               <div style={{ fontSize: 16, fontWeight: 700, color: TOKEN.text, textAlign: "center" }}>

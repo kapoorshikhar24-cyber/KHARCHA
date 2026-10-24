@@ -102,7 +102,8 @@ export const S: { [key: string]: CSSProperties } = {
     flex: 1,
     display: "flex",
     flexDirection: "column",
-    overflow: "hidden",
+    overflowY: "auto" as "auto",
+    overflowX: "hidden" as "hidden",
     background: TOKEN.bg,
   },
   windowsKpiCard: {
@@ -143,7 +144,7 @@ export const S: { [key: string]: CSSProperties } = {
   notch: { width: 80, height: 14, background: TOKEN.surfaceHighlight, borderRadius: 20, border: `0.5px solid ${TOKEN.border}` },
   homeBar: { padding: "8px 0 14px", display: "flex", justifyContent: "center", flexShrink: 0, background: TOKEN.phone },
   homeIndicator: { width: 100, height: 4, background: TOKEN.border, borderRadius: 2 },
-  body: { flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" },
+  body: { flex: 1, overflowY: "auto" as "auto", overflowX: "hidden" as "hidden", display: "flex", flexDirection: "column" },
   screen: {
     flex: 1,
     display: "flex",

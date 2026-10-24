@@ -133,10 +133,12 @@ export default function SmsTrackingModal({
         background: "rgba(0, 0, 0, 0.75)",
         backdropFilter: "blur(12px)",
         display: "flex",
-        alignItems: "center",
+        alignItems: "flex-start",
         justifyContent: "center",
         zIndex: 9999,
-        padding: 16,
+        padding: "24px 16px",
+        overflowY: "auto",
+        WebkitOverflowScrolling: "touch",
       }}
       onClick={onClose}
     >
@@ -146,6 +148,7 @@ export default function SmsTrackingModal({
           maxWidth: 620,
           maxHeight: "90vh",
           overflowY: "auto",
+          margin: "auto 0",
           background: isLight ? "#FFFFFF" : "#13131F",
           border: `1px solid ${TOKEN.border}`,
           borderRadius: 20,

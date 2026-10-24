@@ -23,6 +23,7 @@ export type ScreenName =
 
 export type PeriodName = "today" | "week" | "month";
 export type RecurrenceFrequency = "daily" | "weekly" | "monthly" | "yearly";
+export type TransactionType = "expense" | "income" | "transfer";
 
 export interface Category {
   id: string;
@@ -53,8 +54,10 @@ export interface Expense {
   amount: number;
   note: string;
   createdAt: string;
-  type?: "expense" | "income";
+  type?: TransactionType;
   walletId?: string;
+  sourceWalletId?: string;
+  destinationWalletId?: string;
   isRecurring?: boolean;
   frequency?: RecurrenceFrequency;
   bankName?: string;
